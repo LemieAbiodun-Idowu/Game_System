@@ -19,6 +19,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
   OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
 
+#define LOGO_HEIGHT   64
+#define LOGO_WIDTH    128
+const unsigned char SimpleLogo_V1 [] = {};
 const int JOY_X = A0;
 const int JOY_Y = A1;
 int JOY_B = 2;
@@ -61,6 +64,9 @@ void setup() {
   Serial.println(F("SSD1306 allocation failed"));
   for(;;); // Don't proceed, loop forever
   }
+  testdrawbitmap();    // Draw a small bitmap image
+  delay(5000);
+
   display.clearDisplay();
 }
 
@@ -151,4 +157,12 @@ void loop() {
   // Serial.println("----------------------------------------------------------"); 
   delay(200);
  
+}
+
+
+void testdrawbitmap(void) {
+  display.clearDisplay();
+  display.drawBitmap(0, 0, SimpleLogo_V1, LOGO_WIDTH, LOGO_HEIGHT, SSD1306_WHITE);
+  display.display();
+  delay(1000);
 }
