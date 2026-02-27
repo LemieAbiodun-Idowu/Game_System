@@ -34,7 +34,7 @@ int GREEN = 5;
 int RED = 6;
 int YELLOW = 7;
 
-int BUZZER = 12;
+int BUZZER = 12; //BUZZER SHOULD BE 8
 
 int melody[] = {
   NOTE_C4, NOTE_E4, NOTE_G4,
