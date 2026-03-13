@@ -26,7 +26,9 @@ int BUZZER = 8;
 // const int click[] PROGMEM = { 1047 };
 // const int click_duration[] PROGMEM = { 100 };
 
-// bool b1, b2, b3;
+bool b1, b2, b3;
+extern bool isGameOver;
+extern bool isPaused;
 
 void setup() {
   Serial.begin(9600);
@@ -40,7 +42,7 @@ void setup() {
   setupRFID();
   cardScanning();
   drawFrame();
-  GameSetup();
+  initialiseGame();
 }
 
 void loop() {
@@ -57,7 +59,6 @@ void loop() {
   // // Serial.println(y_point);
 
   // display.display();
-
   // if(!digitalRead(JOY_B)){ // BUTTON RETURNS TO OFF STATE AFTER RELEASE
   //   // Serial.println("JOYSTICK BUTTON ON");
   //   digitalWrite(YELLOW, HIGH);
@@ -122,12 +123,14 @@ void loop() {
   //   digitalWrite(RED, LOW);
   //   // display.clearDisplay();
   // }
-  Game_Over_Check();
+  checkGameOver();
+  if(isGameOver) return;
 
-  Pause_Button();
+  PauseButton();
+  if(isPaused) return;
 
-  HARDDROP();
-  PieceLogic();
+  hardDrop();
+  updatePieceGravity(); //idk if this is even a good name
 
   deadzone();  //PLS RENAME JACK this cause i dont get what deadzones are for
 
@@ -152,6 +155,6 @@ void loop() {
   // }
   PieceRotation();
 
-  //delay(100);
+  delay(100);
   // Serial.println("----------------------------------------------------------");
 }
