@@ -80,7 +80,7 @@ void updatePieceGravity() {
   }
 }
 
-void deadzone() {
+void deadzone() { // Collision Blocks Identifier
   if(isPaused || isGameOver) return;
   if (x_point < 32 - deadZone) {
     if (!nextHorizontalCollision(piece, -1)) {
