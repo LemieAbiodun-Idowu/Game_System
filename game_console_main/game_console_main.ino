@@ -130,10 +130,9 @@ void loop() {
   if(isPaused) return;
 
   hardDrop();
-  updatePieceGravity(); //idk if this is even a good name
+  updatePieceGravity(); 
 
-  deadzone();  //PLS RENAME JACK this cause i dont get what deadzones are for
-
+  deadzone();  
   // if (x_point >= 0 && x_point < 32) {
   //   // tone(BUZZER, click[0], 1000 / click_duration[0]);
   //   // delay(100);
