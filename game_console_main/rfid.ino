@@ -47,7 +47,7 @@ void cardScanning() {
       delay(5000);
       // mfrc522.PICC_HaltA();
       // mfrc522.PCD_StopCrypto1();
-      digitalWrite(SS_PIN, HIGH);  //Turn rfid off
+      //digitalWrite(SS_PIN, HIGH);  //Turn rfid off
       break;
     }
   }
