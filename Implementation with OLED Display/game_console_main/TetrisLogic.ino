@@ -21,7 +21,8 @@ extern const char pieces_l[2][2][4];
 
 
 void initialiseGame() {
-  randomSeed(analogRead(0));
+  randomSeed(analogRead(0));  //Need to change this as 1. analogRead(0) can return 0 1/1024 which causes a failure and 2. We will be using pin 0 in future
+                              //I might recommend using micros() with some logic i'll add into the display later.
   nextType = random(TYPES);
   generate();
   timer = millis();
