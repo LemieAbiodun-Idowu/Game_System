@@ -17,6 +17,7 @@
 #define Ab5 932
 
 const int midi1[490][3]PROGMEM = {
+  {Db4, 0, 8130}
  {Db4, 126, 1},
  {F4, 253, 1},
  {Gb4, 253, 1},

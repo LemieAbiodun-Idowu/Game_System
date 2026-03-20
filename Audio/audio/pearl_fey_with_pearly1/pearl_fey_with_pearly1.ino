@@ -221,7 +221,7 @@ void playMidi(int pin, const int notes[][3], size_t len){
 void setup() {
   // put your setup code here, to run once:
   // play midi by passing pin no., midi, midi len
-  playMidi(11, midi1, ARRAY_LEN(midi1));
+  playMidi(22, midi1, ARRAY_LEN(midi1));
 }
 
 void loop() {

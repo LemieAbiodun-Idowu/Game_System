@@ -23,7 +23,8 @@
 #define E4 330
 #define D4 294
 
-const int midi1[903][3]PROGMEM = {
+const int midi1[904][3]PROGMEM = {
+  {Fb5, 0, 287},
  {Fb5, 485, 109},
  {G5, 485, 109},
  {F5, 485, 109},
