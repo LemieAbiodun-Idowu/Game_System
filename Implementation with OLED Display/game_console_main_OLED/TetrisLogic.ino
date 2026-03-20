@@ -10,6 +10,8 @@ short piece[2][4];
 extern Adafruit_SSD1306 display;
 extern int x_point, y_point;
 extern int deadZone;
+unsigned long lastSoftDropTime = 0;
+const int softDropSpeed = 50; // ms between moves
 
 extern const char pieces_S_l[2][2][4];;
 extern const char pieces_S_r[2][2][4];
@@ -38,7 +40,7 @@ void checkGameOver() {
 }
 
 void hardDrop() {
-  if (!digitalRead(JOY_B)) {  // button pressed (INPUT_PULLUP)
+  if (!digitalRead(UP)) {  // button pressed (INPUT_PULLUP)
 
     // Move piece down until collision
     while (!nextCollision()) {
@@ -258,9 +260,37 @@ short getMaxRotation(short type) {
     return 0;
 }
 
-/////////////////////////START HERE
 bool canRotate(short rotation) {
   short piece[2][4];
   copyPiece(piece, currentType, rotation);
   return !nextHorizontalCollision(piece, 0);
 }
+
+void softDrop() {
+  if (!digitalRead(DOWN)) { 
+
+    if (millis() - lastSoftDropTime >= softDropSpeed) {
+      lastSoftDropTime = millis();
+
+      if (!nextCollision()) {
+        pieceY++;
+      } else {
+        // lock piece if it hits something
+        for (short i = 0; i < 4; i++) {
+          grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
+        }
+
+        generate();
+
+        if (spawnCollision()) {
+          displayGameOver();
+          return;
+        }
+
+        refreshGrid();
+      }
+    }
+  }
+}
+
+
