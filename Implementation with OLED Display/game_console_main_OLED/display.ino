@@ -13,7 +13,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
 const short MARGIN_TOP = 19;
 const short MARGIN_LEFT = 3;
 const short SIZE = 5;
-
+extern short holdType;
+extern short getGhostY();
 
 
 void setupOLED() {
@@ -59,14 +60,16 @@ void drawNextPiece() {
 }
 
 void drawLayout() {
-  // display.drawLine(0, 64, SCREEN_WIDTH, 32, WHITE);
   display.drawRect(0, 0, SCREEN_HEIGHT, SCREEN_WIDTH, WHITE);
   drawNextPiece();
+  drawHoldPiece(); // <-- ADDED: Draw the held piece
+  
   char text[6];
   itoa(score, text, 10);
   drawTextLayout(text, 7, 4);
   display.drawLine(0, 14, SCREEN_WIDTH, 14, WHITE);
 }
+
 // short getNumberLength(int n){
 //   short counter = 1;
 //   while(n >= 10){
@@ -112,8 +115,55 @@ void displayGameOver() {
 
 void refreshGrid() {
   display.clearDisplay();
+  
   drawLayout();
   drawGrid();
+  
+  // Calculate and draw the Ghost Piece
+  short ghostY = getGhostY();
+  drawGhostPiece(pieceX, ghostY); 
+  
+  // Draw the Active Piece (drawn after ghost so it overlays properly)
   drawPiece(currentType, pieceX, pieceY);
+  
   display.display();
+}
+
+void drawGhostPiece(short x, short y) {
+  for (short i = 0; i < 4; i++) {
+    // drawRect creates an outline instead of a solid filled box
+    display.drawRect(MARGIN_LEFT + (SIZE + 1) * (x + piece[0][i]), 
+                     MARGIN_TOP + (SIZE + 1) * (y + piece[1][i]), 
+                     SIZE, SIZE, WHITE);
+  }
+}
+
+void drawHoldPiece() {
+  // Draw the Hold box
+  const int HOLD_X = 28; // X position of the hold box
+  const int HOLD_Y = 2;  // Y position
+  const int HOLD_WIDTH = 24;
+  const int HOLD_HEIGHT = 20;
+
+  // Draw rectangle for hold area
+  display.drawRect(HOLD_X, HOLD_Y, HOLD_WIDTH, HOLD_HEIGHT, WHITE);
+
+  // Label it
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(HOLD_X + 2, HOLD_Y + 1);
+  display.print("HOLD");
+
+  // Draw the held piece inside the box
+  if (holdType == -1) return; // No piece held
+
+  short hPiece[2][4];
+  copyPiece(hPiece, holdType, 0); // Get piece shape at rotation 0
+
+  // Scale down the piece to fit inside the hold box
+  for (short i = 0; i < 4; i++) {
+    display.fillRect(HOLD_X + 6 + 4 * hPiece[0][i],  // X offset + scale
+                     HOLD_Y + 10 + 4 * hPiece[1][i], // Y offset + scale
+                     3, 3, WHITE);                   // small size to fit box
+  }
 }

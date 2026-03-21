@@ -8,10 +8,15 @@ word currentType, nextType, rotation;
 short pieceX, pieceY;
 short piece[2][4];
 extern Adafruit_SSD1306 display;
-extern int x_point, y_point;
-extern int deadZone;
+//extern int x_point, y_point;
+//extern int deadZone;
 unsigned long lastSoftDropTime = 0;
 const int softDropSpeed = 50; // ms between moves
+short holdType = -1; // minus means hold slot is empty
+bool canHold = true; // Prevents holding more than once per drop
+bool holdButtonReady = true; // track if the button can trigger a hold
+unsigned long lastMoveTime = 0;
+const int moveDelay = 120; // ms between moves
 
 extern const char pieces_S_l[2][2][4];;
 extern const char pieces_S_r[2][2][4];
@@ -83,20 +88,20 @@ void updatePieceGravity() {
   }
 }
 
-void deadzone() { // Collision Blocks Identifier
-  if(isPaused || isGameOver) return;
-  if (x_point < 32 - deadZone) {
-    if (!nextHorizontalCollision(piece, -1)) {
-      pieceX--;
-      refreshGrid();
-    }
-  } else if (x_point > 32 + deadZone) {
-    if (!nextHorizontalCollision(piece, 1)) {
-      pieceX++;
-      refreshGrid();
-    }
-  }
-}
+// void deadzone() { // Collision Blocks Identifier
+//   if(isPaused || isGameOver) return;
+//   if (x_point < 32 - deadZone) {
+//     if (!nextHorizontalCollision(piece, -1)) {
+//       pieceX--;
+//       refreshGrid();
+//     }
+//   } else if (x_point > 32 + deadZone) {
+//     if (!nextHorizontalCollision(piece, 1)) {
+//       pieceX++;
+//       refreshGrid();
+//     }
+//   }
+// }
 
 void PieceRotation() {
   if (!digitalRead(B_1)) {  //assign to change
@@ -120,13 +125,15 @@ void PieceRotation() {
 }
 
 void resetGame() {
-  // Clear grid
+// Clear grid
   for (short x = 0; x < 10; x++)
     for (short y = 0; y < 18; y++)
       grid[x][y] = 0;
 
   score = 0;
   interval = 500;
+  holdType = -1;    // ADDED: Clear hold slot
+  canHold = true;   // ADDED: Reset hold availability
 
   display.clearDisplay();
   display.display();
@@ -144,6 +151,7 @@ void generate() {
   pieceY = 0;
   rotation = 0;
   copyPiece(piece, currentType, rotation);
+  canHold = true; // ADDED: Player can use hold again for this new piece
 }
 
 void checkLines() {
@@ -289,6 +297,87 @@ void softDrop() {
 
         refreshGrid();
       }
+    }
+  }
+}
+
+void holdBlocks() {
+  // Only trigger if the button is pressed
+  if (!digitalRead(B_2)) {  // INPUT_PULLUP assumed, LOW when pressed
+    if (holdButtonReady) {
+      // Don't execute if the game is over, paused, or already held this turn
+      if (!canHold || isGameOver) return;
+
+      if (holdType == -1) {
+        // If hold is empty, stash the current piece and generate a new one
+        holdType = currentType;
+        generate(); // Your existing generate function fetches the next piece
+      } else {
+        // Swap the current piece with the held piece
+        short temp = currentType;
+        currentType = holdType;
+        holdType = temp;
+
+        // Reset position and rotation
+        pieceX = 3;
+        pieceY = 0;
+        rotation = 0;
+        copyPiece(piece, currentType, rotation);
+      }
+
+      canHold = false;   // Prevent holding again until the next piece locks
+      refreshGrid();     // Update the display
+      holdButtonReady = false;  // wait for release
+    }
+  } else {
+    // Button released → ready for next press
+    holdButtonReady = true;
+  }
+}
+
+// Simulates a collision check at a specific simulated Y coordinate
+bool checkCollisionAt(short simY) {
+  for (short i = 0; i < 4; i++) {
+    short y = simY + piece[1][i] + 1; // Check the next step down
+    short x = pieceX + piece[0][i];
+    
+    if (y > 17 || grid[x][y]) {
+      return true; // Collision detected
+    }
+  }
+  return false;
+}
+
+// Finds the lowest valid Y coordinate for the current piece
+short getGhostY() {
+  short ghostY = pieceY;
+  // Keep pushing the ghost piece down until it hits something
+  while (!checkCollisionAt(ghostY)) {
+    ghostY++;
+  }
+  return ghostY;
+}
+
+void handleLeftRight() {
+  if (isPaused || isGameOver) return;
+
+  // Only allow movement every "moveDelay" milliseconds
+  if (millis() - lastMoveTime < moveDelay) return;
+
+  // LEFT button (INPUT_PULLUP → LOW when pressed)
+  if (!digitalRead(LEFT)) {
+    if (!nextHorizontalCollision(piece, -1)) {
+      pieceX--;
+      refreshGrid();
+      lastMoveTime = millis();
+    }
+  }
+  // RIGHT button
+  else if (!digitalRead(RIGHT)) {
+    if (!nextHorizontalCollision(piece, 1)) {
+      pieceX++;
+      refreshGrid();
+      lastMoveTime = millis();
     }
   }
 }

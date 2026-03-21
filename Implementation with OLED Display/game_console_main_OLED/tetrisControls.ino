@@ -41,3 +41,16 @@ void PauseButton() {
   }
 }
 
+// void moveLeft() {
+//   if (!nextCollision()) {
+//     pieceX--;
+//     refreshGrid();
+//   }
+// }
+
+// void moveRight() {
+//   if (!nextCollision()) {
+//     pieceX++;
+//     refreshGrid();
+//   }
+// }
