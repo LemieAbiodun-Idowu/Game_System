@@ -3,7 +3,7 @@ HardwareSerial mySerial(2);
   //Use UART for simplicity, ease of access and because SPI and I2C are inefficient due to added complexity of how the Touchscreen also uses the SPI
   //(Insert reason for inability to use I2C)
 void setup() {
-  Serial.begin(115200); // USB debug
+  Serial.begin(115200); 
 
   mySerial.begin(115200, SERIAL_8N1, 35, 22); 
   // RX = 35, TX = 22

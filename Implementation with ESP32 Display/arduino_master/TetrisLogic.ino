@@ -19,6 +19,8 @@ extern const char pieces_T[4][2][4];
 extern const char pieces_l[2][2][4];
 
 
+//Figure out what messages will be sent to esp for every single command you send in :)
+
 
 void initialiseGame() {
   randomSeed(analogRead(0));  //Need to change this as 1. analogRead(0) can return 0 1/1024 which causes a failure and 2. We will be using pin 0 in future

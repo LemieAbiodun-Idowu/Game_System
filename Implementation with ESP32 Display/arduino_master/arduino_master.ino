@@ -1,13 +1,13 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <MFRC522.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-// #include "pitches.h"
+  // #include <Adafruit_GFX.h>
+  // #include <Adafruit_SSD1306.h>
+  // #include "pitches.h"
 
-int JOY_B = 2;  //Please explain what this used for
-int B_1 = 3;  //rotate
-int B_2 = 4;  //speed
+  int JOY_B = 2; 
+int B_1 = 7;      //rotate
+int B_2 = 8;      //speed
 // int BUT1 = 0;
 // int BUT2 = 0;
 
@@ -26,22 +26,16 @@ int BUZZER = 8;
 // const int click[] PROGMEM = { 1047 };
 // const int click_duration[] PROGMEM = { 100 };
 
-bool b1, b2, b3;
+bool b1, b2, b3;    //Find out what these do and give them better names
 extern bool isGameOver;
 extern bool isPaused;
 
 void setup() {
-  Serial.begin(9600);
+  UARTsetup();
   controlsSetup();
-  // pinMode(GREEN, OUTPUT);
-  // pinMode(RED, OUTPUT);
-  // pinMode(BLUE, OUTPUT);
-
-  SPI.begin();  // Init SPI bus
-  setupOLED();
   setupRFID();
   cardScanning();
-  drawFrame();
+  // drawFrame();
   initialiseGame();
 }
 
@@ -124,15 +118,15 @@ void loop() {
   //   // display.clearDisplay();
   // }
   checkGameOver();
-  if(isGameOver) return;
+  if (isGameOver) return;
 
   PauseButton();
-  if(isPaused) return;
+  if (isPaused) return;
 
   hardDrop();
-  updatePieceGravity(); 
+  updatePieceGravity();
 
-  deadzone();  
+  deadzone();
   // if (x_point >= 0 && x_point < 32) {
   //   // tone(BUZZER, click[0], 1000 / click_duration[0]);
   //   // delay(100);

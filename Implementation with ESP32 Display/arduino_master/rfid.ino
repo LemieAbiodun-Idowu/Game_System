@@ -3,14 +3,16 @@
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 
 bool NOVALID_CARD = true;
+
 void setupRFID() {
   pinMode(SS_PIN, OUTPUT);
   digitalWrite(SS_PIN, HIGH);
   mfrc522.PCD_Init();  // Init MFRC522 card
   delay(50);           // give reader time to boot
-  Serial.println("Card Initialised");
-  display.display();
+  // Serial.println("Card Initialised");
+  // display.display();
 }
+
 void cardScanning() {
   while (true) {
     if (!mfrc522.PICC_IsNewCardPresent()) continue;
@@ -36,15 +38,13 @@ void cardScanning() {
       }
     }
     if (NOVALID_CARD) {
-      display.clearDisplay();
-      drawText(F("ACCESS    DENIED              INVALID   CARD LMAO"), 0, 32);
-      display.display();
-      delay(2000);
+      // display.clearDisplay();
+      // drawText(F("ACCESS    DENIED              INVALID   CARD LMAO"), 0, 32);
+      // display.display();
+      failedCardMsg();
     } else {
-      display.clearDisplay();
-      drawText(F("ACCESS GRANTED TO   CARD"), 0, 42);
-      display.display();
-      delay(5000);
+      passedCardMsg(j+1);
+
       // mfrc522.PICC_HaltA();
       // mfrc522.PCD_StopCrypto1();
       //digitalWrite(SS_PIN, HIGH);  //Turn rfid off

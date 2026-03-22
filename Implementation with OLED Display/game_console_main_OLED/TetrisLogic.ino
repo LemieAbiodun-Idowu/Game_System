@@ -359,7 +359,7 @@ short getGhostY() {
 }
 
 void handleLeftRight() {
-  if (isPaused || isGameOver) return;
+  //if (isPaused || isGameOver) return;  irrelevant
 
   // Only allow movement every "moveDelay" milliseconds
   if (millis() - lastMoveTime < moveDelay) return;

@@ -1,6 +1,5 @@
 #include "audio.h"
-#include "pokemon_center_melody.h"
-#include "pokemon_center_accompaniment"
+
 
 void playSong(int pin, const int notes[][3], size_t len){
   for (int i = 0; i < len; i++) {
