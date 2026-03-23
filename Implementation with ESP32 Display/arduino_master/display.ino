@@ -5,18 +5,19 @@
 TFT_eSPI display = TFT_eSPI(); 
 
 // Display Settings
-const short SIZE = 12;          // Increased from 5 to 12 so it's not tiny
-const short MARGIN_LEFT = 80;   // Centering the grid on the wider screen
+const short SIZE = 12;          
+const short MARGIN_LEFT = 80;   
 const short MARGIN_TOP = 10;
-const uint16_t WHITE = TFT_WHITE; // Map old color name to new library
+const uint16_t WHITE = TFT_WHITE; 
 const uint16_t BLACK = TFT_BLACK;
 
-// Tell this file that these variables exist in TetrisLogic
+// --- FIXED EXTERN SECTION ---
+// These MUST match the types and sizes in TetrisLogic.ino exactly
 extern int8_t pieceX, pieceY;
-extern int8_t piece;   // Dimensions MUST match TetrisLogic
+extern int8_t piece;    // Fixed: Added dimensions
 extern uint8_t currentType;
 extern int8_t holdType;
-extern byte grid;    // Dimensions MUST match TetrisLogic
+extern byte grid;     // Fixed: Added dimensions
 
 // Function from TetrisLogic
 extern short getGhostY();
@@ -34,7 +35,6 @@ void setupOLED() {
 }
 
 void drawText(String text, int x, int y) {
-  // Simple wrapper to match your old code's style
   display.setCursor(x, y);
   display.print(text);
 }
@@ -48,7 +48,8 @@ void drawFrame() {
 void refreshGrid() {
   drawFrame();
   
-  // Draw the settled blocks in the grid
+  // 1. Draw the settled blocks in the grid
+  // Using int8_t for loop counters saves a tiny bit more RAM
   for (int8_t i = 0; i < 10; i++) {
     for (int8_t j = 0; j < 18; j++) {
       if (grid[i][j]) {
@@ -57,30 +58,26 @@ void refreshGrid() {
     }
   }
 
-  // Draw Ghost Piece
+  // 2. Draw Ghost Piece (Fixed for 2D array)
   short ghostY = getGhostY();
-  for (short i = 0; i < 4; i++) {
+  for (int8_t i = 0; i < 4; i++) {
     display.drawRect(MARGIN_LEFT + (SIZE + 1) * (pieceX + piece[i]), 
                      MARGIN_TOP + (SIZE + 1) * (ghostY + piece[i]), 
                      SIZE, SIZE, TFT_WHITE);
   }
 
-  // Draw Active Piece
-  for (short i = 0; i < 4; i++) {
+  // 3. Draw Active Piece (Fixed for 2D array)
+  for (int8_t i = 0; i < 4; i++) {
     display.fillRect(MARGIN_LEFT + (SIZE + 1) * (pieceX + piece[i]), 
                      MARGIN_TOP + (SIZE + 1) * (pieceY + piece[i]), 
                      SIZE, SIZE, TFT_WHITE);
   }
-  
-  drawHoldPiece();
-  // Note: No display.display() needed for TFT_eSPI!
 }
 
-void drawHoldPiece() {
-  const int HOLD_X = 10; 
-  const int HOLD_Y = 10;
-  display.drawRect(HOLD_X, HOLD_Y, 50, 50, TFT_WHITE);
-  display.setCursor(HOLD_X + 5, HOLD_Y + 5);
-  display.setTextSize(1);
-  display.print("HOLD");
+void displayGameOver() {
+  display.fillScreen(TFT_BLACK);
+  display.setTextColor(TFT_RED);
+  display.setTextSize(3);
+  display.setCursor(50, 100);
+  display.print("GAME OVER");
 }
