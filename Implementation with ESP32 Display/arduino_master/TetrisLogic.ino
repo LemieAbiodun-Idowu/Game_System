@@ -135,23 +135,18 @@ void PieceRotation() {
 }
 
 void resetGame() {
-  // Clear grid
   for (short x = 0; x < 10; x++)
     for (short y = 0; y < 18; y++)
       grid[x][y] = 0;
-
+  
   score = 0;
   interval = 500;
   holdType = -1;    
-  canHold = true;   
-
-  // REMOVED old display.clearDisplay() here
-
+  canHold = true;
   nextType = random(TYPES);
   generate();
   isGameOver = false;
 
-  // NEW: Tell ESP32 we are playing and send the fresh board!
   Serial.println("STATE:PLAY");
   refreshGrid();
 }
