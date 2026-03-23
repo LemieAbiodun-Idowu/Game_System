@@ -9,8 +9,7 @@ void UARTsetup() {
   // Starts hardware serial on Pins 0 (RX) and 1 (TX)
   Serial.begin(115200);     
   
-  delay(100);
-  Serial.println("INIT"); // Wakes up the ESP32 screen!
+  // Serial.println("INIT"); // Wakes up the ESP32 screen!
 }
 
 void failedCardMsg() {

@@ -43,6 +43,9 @@ void initialiseGame() {
   nextType = random(TYPES);
   generate();
   timer = millis();
+
+  Serial.println("STATE:PLAY");
+  refreshGrid();
 }
 
 void checkGameOver() {
