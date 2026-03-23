@@ -5,7 +5,7 @@
   // #include <Adafruit_SSD1306.h>
   // #include "pitches.h"
 
-  int JOY_B = 2; 
+int JOY_B = 2; 
 int B_1 = 7;      //rotate
 int B_2 = 8;      //speed
 // int BUT1 = 0;
