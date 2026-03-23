@@ -10,14 +10,14 @@ bool isGameOver = false;
 bool isPaused = false; 
 
 long timer, delayer;
-const int8_t TYPES = 6;  // Set to 6 to match the 6 pieces in your switch statement
+const int8_t TYPES = 6;  // Matches the 6 pieces in your switch statement
 
 // 3. Memory Optimization: 1-byte variables for pieces
 uint8_t currentType, nextType, rotation;
 int8_t pieceX, pieceY;
 int8_t piece[2][4];
 int8_t holdType = -1;
-bool b3 = true; // Added missing variable for rotation debouncing
+bool b3 = true; 
 
 // Point to the screen object created in display.ino
 extern TFT_eSPI display;
@@ -25,21 +25,21 @@ extern TFT_eSPI display;
 // References to controls and pieces defined in other files
 extern int x_point, y_point;
 extern int deadZone;
-extern bool B_1, B_2, JOY_B; // Ensure these are defined in your controls file
+extern int JOY_B, B_1, B_2; // Ensure these match your actual pin variable types
 
-extern const char pieces_S_l;
-extern const char pieces_S_r;
-extern const char pieces_L_l;
-extern const char pieces_Sq;
-extern const char pieces_T;
-extern const char pieces_l;
+extern const char pieces_S_l[2][2][4];
+extern const char pieces_S_r[2][2][4];
+extern const char pieces_L_l[4][2][4];
+extern const char pieces_Sq[1][2][4];
+extern const char pieces_T[4][2][4];
+extern const char pieces_l[2][2][4];
 
 // --- External Functions ---
 extern void refreshGrid();
 extern void displayGameOver();
 
 void initialiseGame() {
-  randomSeed(analogRead(34)); // Pin 34 is usually a safe analog pin on CYD
+  randomSeed(analogRead(34)); 
   nextType = random(TYPES);
   generate();
   timer = millis();
@@ -60,6 +60,7 @@ void hardDrop() {
       pieceY++;
     }
     for (int8_t i = 0; i < 4; i++) {
+      // FIXED: Used[i] and[i] instead of
       grid[pieceX + piece[i]][pieceY + piece[i]] = 1;
     }
     generate();
@@ -107,7 +108,7 @@ void deadzone() {
   }
 }
 
-short getMaxRotation(int8_t type) { // Changed to int8_t
+short getMaxRotation(int8_t type) {
   if (type == 1 || type == 2 || type == 5) return 2;
   else if (type == 0 || type == 4) return 4;
   else if (type == 3) return 1;
@@ -150,10 +151,7 @@ void resetGame() {
 
   score = 0;
   interval = 500;
-  
-  // Cleaned up: Removed OLED-only display.display() commands
   display.fillScreen(TFT_BLACK); 
-
   nextType = random(TYPES);
   generate();
   isGameOver = false;
@@ -176,7 +174,7 @@ void checkLines() {
     }
     if (full) {
       breakLine(y);
-      y++; // Recheck the same row index after shifting
+      y++; 
     }
   }
 }
@@ -190,12 +188,9 @@ void breakLine(int8_t line) {
   for (int8_t x = 0; x < 10; x++) {
     grid[x] = 0;
   }
-  
-  // OLED Invert replaced with a simple screen flash or score update
   score += 10;
 }
 
-// Fixed Header: Changed short to int8_t to match memory settings
 bool nextHorizontalCollision(int8_t p, int8_t amount) {
   for (int8_t i = 0; i < 4; i++) {
     int8_t newX = pieceX + p[i] + amount;
@@ -218,12 +213,12 @@ bool spawnCollision() {
   for (int8_t i = 0; i < 4; i++) {
     int8_t x = pieceX + piece[i];
     int8_t y = pieceY + piece[i];
+    // FIXED: Corrected y boundary check
     if (grid[x][y] || y >= 18) return true;
   }
   return false;
 }
 
-// Fixed Header: Changed parameters to match the 1-byte memory types
 void copyPiece(int8_t p, uint8_t type, uint8_t rot) {
   switch (type) {
     case 0: // L_l

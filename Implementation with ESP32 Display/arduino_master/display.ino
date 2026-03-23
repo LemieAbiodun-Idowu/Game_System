@@ -14,10 +14,10 @@ const uint16_t BLACK = TFT_BLACK;
 // --- FIXED EXTERN SECTION ---
 // These MUST match the types and sizes in TetrisLogic.ino exactly
 extern int8_t pieceX, pieceY;
-extern int8_t piece;    // Fixed: Added dimensions
+extern int8_t piece;    // FIXED: Added
 extern uint8_t currentType;
 extern int8_t holdType;
-extern byte grid;     // Fixed: Added dimensions
+extern byte grid;     // FIXED: Added
 
 // Function from TetrisLogic
 extern short getGhostY();
@@ -46,10 +46,11 @@ void drawFrame() {
 }
 
 void refreshGrid() {
-  drawFrame();
+  // drawFrame();
+  display.fillScreen(TFT_BLACK);
+  display.drawRect(MARGIN_LEFT - 2, MARGIN_TOP - 2, (SIZE + 1) * 10 + 4, (SIZE + 1) * 18 + 4, TFT_WHITE);
   
   // 1. Draw the settled blocks in the grid
-  // Using int8_t for loop counters saves a tiny bit more RAM
   for (int8_t i = 0; i < 10; i++) {
     for (int8_t j = 0; j < 18; j++) {
       if (grid[i][j]) {
