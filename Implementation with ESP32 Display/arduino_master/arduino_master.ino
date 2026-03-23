@@ -1,6 +1,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <MFRC522.h>
+#include <TFT_eSPI.h>
   // #include <Adafruit_GFX.h>
   // #include <Adafruit_SSD1306.h>
   // #include "pitches.h"

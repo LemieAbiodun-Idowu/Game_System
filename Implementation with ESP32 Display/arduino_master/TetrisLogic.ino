@@ -1,13 +1,25 @@
+#include <TFT_eSPI.h>
+
 byte grid[10][18];
-int interval = 500;
-int score = 0;
+
+// Use uint16_t for score/interval (2 bytes) instead of int (4 bytes)
+uint16_t interval = 500;
+uint16_t score = 0;
 bool isGameOver = false;
+
 long timer, delayer;
-const short TYPES = 6;  //type of pieces used
-word currentType, nextType, rotation;
-short pieceX, pieceY;
-short piece[2][4];
-extern Adafruit_SSD1306 display;
+const int8_t TYPES = 7;  //type of pieces used
+
+// These variables used to be 2-4 bytes each; now they are 1 byte each
+uint8_t currentType, nextType, rotation;
+int8_t pieceX, pieceY;
+int8_t piece[2][4];
+int8_t holdType = -1;
+
+// Point to the screen object created in display.ino
+extern TFT_eSPI display;
+
+// References to controls
 extern int x_point, y_point;
 extern int deadZone;
 

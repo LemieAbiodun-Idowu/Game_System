@@ -4,19 +4,22 @@
 // Initialize the TFT screen
 TFT_eSPI display = TFT_eSPI(); 
 
-// Adjusting sizes for the 320x240 screen
+// Display Settings
 const short SIZE = 12;          // Increased from 5 to 12 so it's not tiny
 const short MARGIN_LEFT = 80;   // Centering the grid on the wider screen
 const short MARGIN_TOP = 10;
 const uint16_t WHITE = TFT_WHITE; // Map old color name to new library
 const uint16_t BLACK = TFT_BLACK;
 
-extern short holdType;
+// Tell this file that these variables exist in TetrisLogic
+extern int8_t pieceX, pieceY;
+extern int8_t piece;   // Dimensions MUST match TetrisLogic
+extern uint8_t currentType;
+extern int8_t holdType;
+extern byte grid;    // Dimensions MUST match TetrisLogic
+
+// Function from TetrisLogic
 extern short getGhostY();
-extern short piece;
-extern word currentType;
-extern short pieceX, pieceY;
-extern byte grid;
 
 void setupOLED() {
   display.init();
@@ -46,8 +49,8 @@ void refreshGrid() {
   drawFrame();
   
   // Draw the settled blocks in the grid
-  for (short i = 0; i < 10; i++) {
-    for (short j = 0; j < 18; j++) {
+  for (int8_t i = 0; i < 10; i++) {
+    for (int8_t j = 0; j < 18; j++) {
       if (grid[i][j]) {
         display.fillRect(MARGIN_LEFT + (SIZE + 1) * i, MARGIN_TOP + (SIZE + 1) * j, SIZE, SIZE, TFT_WHITE);
       }
