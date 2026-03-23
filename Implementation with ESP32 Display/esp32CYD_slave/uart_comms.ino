@@ -7,10 +7,6 @@ void UARTsetup() {
   // Draw the splash screen message ONCE
   displayDefMsg();
 
-  // Wait peacefully until Arduino sends the first game state or card scan
-  while (!mySerial.available()) {
-    delay(10); // Keeps the ESP32 from crashing while waiting
-  }
 }
 
 // Run this constantly in the ESP32 loop()

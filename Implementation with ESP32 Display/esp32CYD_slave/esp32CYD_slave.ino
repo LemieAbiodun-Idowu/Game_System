@@ -9,8 +9,8 @@ void setup() {
   touchscreensetup();
   displaysetup();
   UARTsetup();
-  //cardScanMsg();
-  drawGameLayout();
+  // cardScanMsg();
+  // drawGameLayout();
 }
 
 void loop(){
