@@ -55,122 +55,128 @@ void displaysetup() {
   // Clear the screen before writing to it
 }
 
-void displayDefMsg() {
-  if (!bckground) {
-    tft.fillScreen(TFT_WHITE);
-    tft.setTextColor(TFT_BLACK, TFT_WHITE);
-  } else {
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  }
+// void displayDefMsg() {
+//   if (!bckground) {
+//     tft.fillScreen(TFT_WHITE);
+//     tft.setTextColor(TFT_BLACK, TFT_WHITE);
+//   } else {
+//     tft.fillScreen(TFT_BLACK);
+//     tft.setTextColor(TFT_WHITE, TFT_BLACK);
+//   }
 
-  tft.drawCentreString(DEFAULT_MSG, centerX, centerY, DEFAULT_FONT);
+//   tft.drawCentreString(DEFAULT_MSG, centerX, centerY, DEFAULT_FONT);
+// }
+
+// void cardMsgDisplay(bool signal, char* cardNumber = NULL) {      //Rename from signal, idk what fits better
+//   tft.fillRect(centerX, centerY, DEFAULT_MSG_WIDTH, DEFAULT_MSG_HEIGHT, TFT_BLACK);
+//   if (!signal) {
+//     tft.drawCentreString(NEG_CARD_SCAN_MSG, centerX, centerY, DEFAULT_FONT);
+//     delay(2000);        //display neg message for 2s
+//     while(!mySerial.available()){
+//       displayDefMsg();  //then go back to default
+//     }
+//     cardScanMsg();
+//   } else {
+//     char full_pos_msg [strlen(POS_CARD_SCAN_MSG) + 2];    //For NULL AND THE NUMBER SENT
+//     snprintf(full_pos_msg, sizeof(full_pos_msg), "%s%s", POS_CARD_SCAN_MSG, cardNumber);
+//     tft.drawCentreString(full_pos_msg, centerX, centerY, DEFAULT_FONT);
+//   }
+// }
+
+
+// --- ADD THIS TO THE BOTTOM OF display.ino ---
+
+const int GRID_X = 10;
+const int GRID_Y = 10;
+const int BLOCK_WIDTH = 12; 
+const int BLOCK_HEIGHT = 12;
+
+const int SCORE_X = 150;
+const int SCORE_Y = 10;
+const int NEXT_X = 150;
+const int NEXT_Y = 60;
+const int HOLD_X = 150;
+const int HOLD_Y = 130;
+
+char prevGrid = {0}; // Buffer prevents screen flicker
+
+void drawGameLayout() {
+  tft.fillScreen(TFT_BLACK);
+  tft.drawRect(GRID_X - 2, GRID_Y - 2, (10 * BLOCK_WIDTH) + 4, (18 * BLOCK_HEIGHT) + 4, TFT_WHITE);
+
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 40, TFT_WHITE);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("SCORE", SCORE_X + 5, SCORE_Y + 5, 1);
+
+  tft.drawRect(NEXT_X, NEXT_Y, 80, 60, TFT_WHITE);
+  tft.drawString("NEXT", NEXT_X + 5, NEXT_Y + 5, 1);
+
+  tft.drawRect(HOLD_X, HOLD_Y, 80, 60, TFT_WHITE);
+  tft.drawString("HOLD", HOLD_X + 5, HOLD_Y + 5, 1);
 }
 
-void cardMsgDisplay(bool signal, char* cardNumber = NULL) {      //Rename from signal, idk what fits better
-  tft.fillRect(centerX, centerY, DEFAULT_MSG_WIDTH, DEFAULT_MSG_HEIGHT, TFT_BLACK);
-  if (!signal) {
-    tft.drawCentreString(NEG_CARD_SCAN_MSG, centerX, centerY, DEFAULT_FONT);
-    delay(2000);        //display neg message for 2s
-    while(!mySerial.available()){
-      displayDefMsg();  //then go back to default
+void updateTetrisGrid(String newGrid) {
+  int charIndex = 0;
+  for (int y = 0; y < 18; y++) {
+    for (int x = 0; x < 10; x++) {
+      char currentState = newGrid.charAt(charIndex);
+      
+      if (currentState != prevGrid[charIndex]) {
+        int xPos = GRID_X + (x * BLOCK_WIDTH);
+        int yPos = GRID_Y + (y * BLOCK_HEIGHT);
+        
+        if (currentState == '1') {
+          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_CYAN); 
+        } else {
+          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK); 
+        }
+        prevGrid[charIndex] = currentState; 
+      }
+      charIndex++;
     }
-    cardScanMsg();
-  } else {
-    char full_pos_msg [strlen(POS_CARD_SCAN_MSG) + 2];    //For NULL AND THE NUMBER SENT
-    snprintf(full_pos_msg, sizeof(full_pos_msg), "%s%s", POS_CARD_SCAN_MSG, cardNumber);
-    tft.drawCentreString(full_pos_msg, centerX, centerY, DEFAULT_FONT);
   }
 }
 
+void updateScore(String scoreTxt) {
+  tft.fillRect(SCORE_X + 5, SCORE_Y + 20, 70, 15, TFT_BLACK); 
+  tft.drawString(scoreTxt, SCORE_X + 5, SCORE_Y + 20, 2);
+}
+
+// NOTE: Ensure your copyPiece function and tetris arrays are also inside the ESP32 files!
+void drawNextPiece(int nextType) {
+  tft.fillRect(NEXT_X + 2, NEXT_Y + 15, 76, 43, TFT_BLACK); 
+  int8_t nPiece[2][4];
+  copyPiece(nPiece, nextType, 0); 
+  for (int i = 0; i < 4; i++) {
+    tft.fillRect(NEXT_X + 20 + (nPiece[i] * 10), NEXT_Y + 25 + (nPiece[1][i] * 10), 9, 9, TFT_WHITE);
+  }
+}
+
+void drawHoldPiece(int holdType) {
+  tft.fillRect(HOLD_X + 2, HOLD_Y + 15, 76, 43, TFT_BLACK); 
+  if (holdType == -1) return; 
+  int8_t hPiece[2][4];
+  copyPiece(hPiece, holdType, 0); 
+  for (int i = 0; i < 4; i++) {
+    tft.fillRect(HOLD_X + 20 + (hPiece[i] * 10), HOLD_Y + 25 + (hPiece[1][i] * 10), 9, 9, TFT_WHITE);
+  }
+}
+
+void showGameOver() {
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_RED);
+  tft.drawCentreString("GAME OVER", centerX, centerY, 4);
+  memset(prevGrid, 0, sizeof(prevGrid));
+}
+
+void showPause() {
+  tft.setTextColor(TFT_YELLOW);
+  tft.drawCentreString("PAUSED", centerX, centerY, 4);
+}
+
+void resumeGame() {
+  drawGameLayout();
+  memset(prevGrid, 0, sizeof(prevGrid));
+}
 
 
-// const short MARGIN_TOP = 19;
-// const short MARGIN_LEFT = 3;
-// const short SIZE = 5;
-
-
-// void drawFrame() {
-
-//   display.clearDisplay();
-//   drawLayout();
-//   display.display();
-// }
-
-// void drawGrid() {
-//   for (short x = 0; x < 10; x++)
-//     for (short y = 0; y < 18; y++)
-//       if (grid[x][y])
-//         display.fillRect(MARGIN_LEFT + (SIZE + 1) * x, MARGIN_TOP + (SIZE + 1) * y, SIZE, SIZE, WHITE);
-// }
-
-// void drawPiece(short type, short x, short y) {
-//   for (short i = 0; i < 4; i++)
-//     display.fillRect(MARGIN_LEFT + (SIZE + 1) * (x + piece[0][i]), MARGIN_TOP + (SIZE + 1) * (y + piece[1][i]), SIZE, SIZE, WHITE);
-// }
-// void drawNextPiece() {
-//   short nPiece[2][4];
-//   copyPiece(nPiece, nextType, 0);
-//   for (short i = 0; i < 4; i++)
-//     display.fillRect(50 + 3 * nPiece[0][i], 4 + 3 * nPiece[1][i], 2, 2, WHITE);
-// }
-
-// void drawLayout() {
-//   // display.drawLine(0, 64, SCREEN_WIDTH, 32, WHITE);
-//   display.drawRect(0, 0, SCREEN_HEIGHT, SCREEN_WIDTH, WHITE);
-//   drawNextPiece();
-//   char text[6];
-//   itoa(score, text, 10);
-//   drawTextLayout(text, 7, 4);
-//   display.drawLine(0, 14, SCREEN_WIDTH, 14, WHITE);
-// }
-// // short getNumberLength(int n){
-// //   short counter = 1;
-// //   while(n >= 10){
-// //     n /= 10;
-// //     counter++;
-// //   }
-// //   return counter;
-// // }
-
-// void drawTextLayout(const char* text, int x, int y) {
-
-//   display.setTextSize(1);               // Normal 1:1 pixel scale
-//   display.setTextColor(SSD1306_WHITE);  // Draw white text
-//   display.setCursor(x, y);              // Start at top-left corner
-//   display.cp437(true);                  // Use full 256 char 'Code Page 437' font
-//   display.print(text);
-// }
-
-// void drawText(const __FlashStringHelper* text, int x, int y) {
-//   display.setTextSize(1);
-//   display.setTextColor(SSD1306_WHITE);
-//   display.setCursor(x, y);
-//   display.cp437(true);
-//   display.print(text);  // print() handles F() strings natively
-// }
-
-// void displayGameOver() {
-
-//   display.clearDisplay();
-//   display.setTextSize(2);
-//   display.setTextColor(WHITE);
-//   display.setCursor(10, 25);
-//   display.print("GAME OVER");
-//   display.setTextSize(1);
-//   display.setCursor(0, 95);
-//   display.print("CLICK TO");
-//   display.setCursor(0, 105);
-//   display.print("RESTART");
-//   display.display();
-//   isGameOver = true;
-//   delay(50);
-// }
-
-// void refreshGrid() {
-//   display.clearDisplay();
-//   drawLayout();
-//   drawGrid();
-//   drawPiece(currentType, pieceX, pieceY);
-//   display.display();
-// }

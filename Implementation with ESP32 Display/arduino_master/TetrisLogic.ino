@@ -1,45 +1,45 @@
-// #include <TFT_eSPI.h>
 
-// 1. Memory Optimization: The Grid
+
 byte grid[10][18];
-
-// 2. Memory Optimization: Small types for game state
-uint16_t interval = 500;
-uint16_t score = 0;
+int interval = 500;
+int score = 0;
 bool isGameOver = false;
-bool isPaused = false; 
-
 long timer, delayer;
-const int8_t TYPES = 6;  // Matches the 6 pieces in your switch statement
+const short TYPES = 6;  //type of pieces used
+word currentType, nextType, rotation;
+short pieceX, pieceY;
+short piece[2][4];
+// extern Adafruit_SSD1306 display;
+//extern int x_point, y_point;
+//extern int deadZone;
+unsigned long lastSoftDropTime = 0;
+const int softDropSpeed = 100; // ms between moves
+short holdType = -1; // minus means hold slot is empty
+bool canHold = true; // Prevents holding more than once per drop
+bool holdButtonReady = true; // track if the button can trigger a hold
+unsigned long lastMoveTime = 0;
+const int moveDelay = 120; // ms between moves
+unsigned long holdStartTime = 0;
+bool isHoldingButton = false;
 
-// 3. Memory Optimization: 1-byte variables for pieces
-uint8_t currentType, nextType, rotation;
-int8_t pieceX, pieceY;
-int8_t piece[2][4];
-int8_t holdType = -1;
-bool b3 = true; 
+extern const char pieces_S_l[2][2][4];;
+extern const char pieces_S_r[2][2][4];
+extern const char pieces_L_l[4][2][4];
+extern const char pieces_Sq[1][2][4];
+extern const char pieces_T[4][2][4];
+extern const char pieces_l[2][2][4];
 
-// // Point to the screen object created in display.ino
-// extern TFT_eSPI display;
+// --- SERIAL COMMUNICATION TO ESP32 ---
 
-// References to controls and pieces defined in other files
-extern int x_point, y_point;
-extern int deadZone;
-extern int B_1, B_2; // Ensure these match your actual pin variable types
+void displayGameOver() {
+  Serial.println("STATE:OVER");
+  isGameOver = true;
+}
 
-extern const char pieces_S_l;
-extern const char pieces_S_r;
-extern const char pieces_L_l;
-extern const char pieces_Sq;
-extern const char pieces_T;
-extern const char pieces_l;
-
-// --- External Functions ---
-extern void refreshGrid();
-extern void displayGameOver();
 
 void initialiseGame() {
-  randomSeed(analogRead(0) + analogRead(A0)); //Why would analog 0 break it?
+  randomSeed(analogRead(0));  //Need to change this as 1. analogRead(0) can return 0 1/1024 which causes a failure and 2. We will be using pin 0 in future
+                              //I might recommend using micros() with some logic i'll add into the display later.
   nextType = random(TYPES);
   generate();
   timer = millis();
@@ -48,28 +48,34 @@ void initialiseGame() {
 void checkGameOver() {
   if (isGameOver) {
     if (!digitalRead(B_2) || !digitalRead(B_1)) {  
-      delay(250); 
+      delay(250);             // simple debounce
       resetGame();
     }
   }
 }
 
 void hardDrop() {
-  if (!digitalRead() { 
+  if (!digitalRead(UP)) {  // button pressed (INPUT_PULLUP)
+
+    // Move piece down until collision
     while (!nextCollision()) {
       pieceY++;
     }
-    for (int8_t i = 0; i < 4; i++) {
-      // FIXED: Used[i] and[i] instead of
-      grid[pieceX + piece[i]][pieceY + piece[i]] = 1;
+
+    // Lock piece into grid
+    for (short i = 0; i < 4; i++) {
+      grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
     }
+
     generate();
+
     if (spawnCollision()) {
       displayGameOver();
       return;
     }
+
     refreshGrid();
-    delay(200); 
+    delay(200);  // simple debounce
   }
 }
 
@@ -79,63 +85,47 @@ void updatePieceGravity() {
     checkLines();
     refreshGrid();
     if (nextCollision()) {
-      for (int8_t i = 0; i < 4; i++)
-        grid[pieceX + piece[i]][pieceY + piece[i]] = 1;
+      for (short i = 0; i < 4; i++)
+        grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
       generate();
       if (spawnCollision()) {
         displayGameOver();
         return;
       }
-    } else {
+    } else
       pieceY++;
-    }
     timer = millis();
   }
 }
 
-void deadzone() { 
-  if(isPaused || isGameOver) return;
-  if (x_point < 32 - deadZone) {
-    if (!nextHorizontalCollision(piece, -1)) {
-      pieceX--;
-      refreshGrid();
-    }
-  } else if (x_point > 32 + deadZone) {
-    if (!nextHorizontalCollision(piece, 1)) {
-      pieceX++;
-      refreshGrid();
-    }
-  }
-}
-
-short getMaxRotation(int8_t type) {
-  if (type == 1 || type == 2 || type == 5) return 2;
-  else if (type == 0 || type == 4) return 4;
-  else if (type == 3) return 1;
-  return 0;
-}
-
-bool canRotate(uint8_t rot) {
-  int8_t tempPiece;
-  copyPiece(tempPiece, currentType, rot);
-  return !nextHorizontalCollision(tempPiece, 0);
-}
+// void deadzone() { // Collision Blocks Identifier
+//   if(isPaused || isGameOver) return;
+//   if (x_point < 32 - deadZone) {
+//     if (!nextHorizontalCollision(piece, -1)) {
+//       pieceX--;
+//       refreshGrid();
+//     }
+//   } else if (x_point > 32 + deadZone) {
+//     if (!nextHorizontalCollision(piece, 1)) {
+//       pieceX++;
+//       refreshGrid();
+//     }
+//   }
+// }
 
 void PieceRotation() {
-  if (!digitalRead(B_1)) { 
+  if (!digitalRead(B_1)) {  //assign to change
+    // tone(BUZZER, click[0], 1000 / click_duration[0]);
+    // delay(100);
+    // noTone(BUZZER);
     if (b3) {
-      uint8_t nextRot = rotation;
-      if (rotation == getMaxRotation(currentType) - 1) {
-        nextRot = 0;
-      } else {
-        nextRot++;
+      if (rotation == getMaxRotation(currentType) - 1 && canRotate(0)) {
+        rotation = 0;
+      } else if (canRotate(rotation + 1)) {
+        rotation++;
       }
-
-      if (canRotate(nextRot)) {
-        rotation = nextRot;
-        copyPiece(piece, currentType, rotation);
-        refreshGrid();
-      }
+      copyPiece(piece, currentType, rotation);
+      refreshGrid();
       b3 = false;
       delayer = millis();
     }
@@ -145,20 +135,25 @@ void PieceRotation() {
 }
 
 void resetGame() {
-  for (int8_t x = 0; x < 10; x++)
-    for (int8_t y = 0; y < 18; y++)
+  // Clear grid
+  for (short x = 0; x < 10; x++)
+    for (short y = 0; y < 18; y++)
       grid[x][y] = 0;
 
   score = 0;
   interval = 500;
+  holdType = -1;    
+  canHold = true;   
 
-  // display.fillScreen(TFT_BLACK); //This should send reset game or equivalent to esp 
-
-
+  // REMOVED old display.clearDisplay() here
 
   nextType = random(TYPES);
   generate();
   isGameOver = false;
+
+  // NEW: Tell ESP32 we are playing and send the fresh board!
+  Serial.println("STATE:PLAY");
+  refreshGrid();
 }
 
 void generate() {
@@ -168,98 +163,240 @@ void generate() {
   pieceY = 0;
   rotation = 0;
   copyPiece(piece, currentType, rotation);
+  canHold = true; // ADDED: Player can use hold again for this new piece
 }
 
 void checkLines() {
-  for (int8_t y = 17; y >= 0; y--) {
-    bool full = true;
-    for (int8_t x = 0; x < 10; x++) {
+  bool full;
+  for (short y = 17; y >= 0; y--) {
+    full = true;
+    for (short x = 0; x < 10; x++) {
       full = full && grid[x][y];
     }
     if (full) {
       breakLine(y);
-      y++; 
+      y++;
     }
   }
 }
-
-void breakLine(int8_t line) {
-  for (int8_t y = line; y > 0; y--) {
-    for (int8_t x = 0; x < 10; x++) {
+void breakLine(short line) {
+  for (short y = line; y > 0; y--) {
+    for (short x = 0; x < 10; x++) {
       grid[x][y] = grid[x][y - 1];
     }
   }
-  for (int8_t x = 0; x < 10; x++) {
-    grid[x] = 0;
+
+  for (short x = 0; x < 10; x++) {
+    grid[x][0] = 0;
   }
+  
   score += 10;
 }
 
-bool nextHorizontalCollision(int8_t p, int8_t amount) {
-  for (int8_t i = 0; i < 4; i++) {
-    int8_t newX = pieceX + p[i] + amount;
-    int8_t newY = pieceY + p[i];
-    if (newX > 9 || newX < 0 || grid[newX][newY]) return true;
+bool nextHorizontalCollision(short piece[2][4], int amount) {
+  for (short i = 0; i < 4; i++) {
+    short newX = pieceX + piece[0][i] + amount;
+    if (newX > 9 || newX < 0 || grid[newX][pieceY + piece[1][i]])
+      return true;
   }
   return false;
 }
-
 bool nextCollision() {
-  for (int8_t i = 0; i < 4; i++) {
-    int8_t y = pieceY + piece[i] + 1;
-    int8_t x = pieceX + piece[i];
-    if (y > 17 || grid[x][y]) return true;
+  for (short i = 0; i < 4; i++) {
+    short y = pieceY + piece[1][i] + 1;
+    short x = pieceX + piece[0][i];
+    if (y > 17 || grid[x][y])
+      return true;
   }
   return false;
 }
 
 bool spawnCollision() {
-  for (int8_t i = 0; i < 4; i++) {
-    int8_t x = pieceX + piece[i];
-    int8_t y = pieceY + piece[i];
-    // FIXED: Corrected y boundary check
-    if (grid[x][y] || y >= 18) return true;
+  for (short i = 0; i < 4; i++) {
+    short x = pieceX + piece[0][i];
+    short y = pieceY + piece[1][i];
+
+    if (grid[x][y] || y >= 14) {
+      return true;
+    }
+  }
+  return false;
+}
+void copyPiece(short piece[2][4], short type, short rotation) {
+  switch (type) {
+    case 0:  //L_l
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_L_l[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_L_l[rotation][1][i]));
+      }
+      break;
+    case 1:  //S_l
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_S_l[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_S_l[rotation][1][i]));
+      }
+      break;
+    case 2:  //S_r
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_S_r[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_S_r[rotation][1][i]));
+      }
+      break;
+    case 3:  //Sq
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_Sq[0][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_Sq[0][1][i]));
+      }
+      break;
+    case 4:  //T
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_T[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_T[rotation][1][i]));
+      }
+      break;
+    case 5:  //l
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_l[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_l[rotation][1][i]));
+      }
+      break;
+  }
+}
+
+short getMaxRotation(short type) {
+  if (type == 1 || type == 2 || type == 5)
+    return 2;
+  else if (type == 0 || type == 4)
+    return 4;
+  else if (type == 3)
+    return 1;
+  else
+    return 0;
+}
+
+bool canRotate(short rotation) {
+  short piece[2][4];
+  copyPiece(piece, currentType, rotation);
+  return !nextHorizontalCollision(piece, 0);
+}
+
+void softDrop() {
+  if (!digitalRead(DOWN)) { 
+
+    if (millis() - lastSoftDropTime >= softDropSpeed) {
+      lastSoftDropTime = millis();
+
+      if (!nextCollision()) {
+        pieceY++;
+      } else {
+        // lock piece if it hits something
+        for (short i = 0; i < 4; i++) {
+          grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
+        }
+
+        generate();
+
+        if (spawnCollision()) {
+          displayGameOver();
+          return;
+        }
+
+        refreshGrid();
+      }
+    }
+  }
+}
+
+void holdBlocks() {
+  if (!digitalRead(B_2)) {  // Button pressed (LOW)
+    
+    if (!isHoldingButton) {
+      // First moment button is pressed
+      holdStartTime = millis();
+      isHoldingButton = true;
+    }
+
+    // Check if held for 2 seconds
+    if (isHoldingButton && (millis() - holdStartTime >= 2000)) {
+
+      if (holdButtonReady) {
+        // Prevent invalid states
+        if (!canHold || isGameOver) return;
+
+        if (holdType == -1) {
+          // Store current piece
+          holdType = currentType;
+          generate();
+        } else {
+          // Swap pieces
+          short temp = currentType;
+          currentType = holdType;
+          holdType = temp;
+
+          pieceX = 3;
+          pieceY = 0;
+          rotation = 0;
+          copyPiece(piece, currentType, rotation);
+        }
+
+        canHold = false;
+        refreshGrid();
+
+        holdButtonReady = false;  // prevent repeat trigger
+      }
+    }
+
+  } else {
+    // Button released → reset state
+    isHoldingButton = false;
+    holdButtonReady = true;
+  }
+}
+
+// Simulates a collision check at a specific simulated Y coordinate
+bool checkCollisionAt(short simY) {
+  for (short i = 0; i < 4; i++) {
+    short y = simY + piece[1][i] + 1; // Check the next step down
+    short x = pieceX + piece[0][i];
+    
+    if (y > 17 || grid[x][y]) {
+      return true; // Collision detected
+    }
   }
   return false;
 }
 
-void copyPiece(int8_t p, uint8_t type, uint8_t rot) {
-  switch (type) {
-    case 0: // L_l
-      for (int8_t i = 0; i < 4; i++) {
-        p[i] = pgm_read_byte(&(pieces_L_l[rot][i]));
-        p[i] = pgm_read_byte(&(pieces_L_l[rot][i]));
-      }
-      break;
-    case 1: // S_l
-      for (int8_t i = 0; i < 4; i++) {
-        p[i] = pgm_read_byte(&(pieces_S_l[rot][i]));
-        p[i] = pgm_read_byte(&(pieces_S_l[rot][i]));
-      }
-      break;
-    case 2: // S_r
-      for (int8_t i = 0; i < 4; i++) {
-        p[i] = pgm_read_byte(&(pieces_S_r[rot][i]));
-        p[i] = pgm_read_byte(&(pieces_S_r[rot][i]));
-      }
-      break;
-    case 3: // Sq
-      for (int8_t i = 0; i < 4; i++) {
-        p[i] = pgm_read_byte(&(pieces_Sq[i]));
-        p[i] = pgm_read_byte(&(pieces_Sq[i]));
-      }
-      break;
-    case 4: // T
-      for (int8_t i = 0; i < 4; i++) {
-        p[i] = pgm_read_byte(&(pieces_T[rot][i]));
-        p[i] = pgm_read_byte(&(pieces_T[rot][i]));
-      }
-      break;
-    case 5: // I (Line)
-      for (int8_t i = 0; i < 4; i++) {
-        p[i] = pgm_read_byte(&(pieces_l[rot][i]));
-        p[i] = pgm_read_byte(&(pieces_l[rot][i]));
-      }
-      break;
+// Finds the lowest valid Y coordinate for the current piece
+short getGhostY() {
+  short ghostY = pieceY;
+  // Keep pushing the ghost piece down until it hits something
+  while (!checkCollisionAt(ghostY)) {
+    ghostY++;
+  }
+  return ghostY;
+}
+
+void handleLeftRight() {
+  //if (isPaused || isGameOver) return;  irrelevant
+
+  // Only allow movement every "moveDelay" milliseconds
+  if (millis() - lastMoveTime < moveDelay) return;
+
+  // LEFT button (INPUT_PULLUP → LOW when pressed)
+  if (!digitalRead(LEFT)) {
+    if (!nextHorizontalCollision(piece, -1)) {
+      pieceX--;
+      refreshGrid();
+      lastMoveTime = millis();
+    }
+  }
+  // RIGHT button
+  if (!digitalRead(RIGHT)) {
+    if (!nextHorizontalCollision(piece, 1)) {
+      pieceX++;
+      refreshGrid();
+      lastMoveTime = millis();
+    }
   }
 }
+

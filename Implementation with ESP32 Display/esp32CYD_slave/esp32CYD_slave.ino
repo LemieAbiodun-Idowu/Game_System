@@ -9,5 +9,10 @@ void setup() {
   touchscreensetup();
   displaysetup();
   UARTsetup();
-  cardScanMsg();
+  //cardScanMsg();
+  drawGameLayout();
+}
+
+void loop(){
+  ListenToArduino();
 }
