@@ -11,12 +11,14 @@ extern Adafruit_SSD1306 display;
 //extern int x_point, y_point;
 //extern int deadZone;
 unsigned long lastSoftDropTime = 0;
-const int softDropSpeed = 50; // ms between moves
+const int softDropSpeed = 100; // ms between moves
 short holdType = -1; // minus means hold slot is empty
 bool canHold = true; // Prevents holding more than once per drop
 bool holdButtonReady = true; // track if the button can trigger a hold
 unsigned long lastMoveTime = 0;
 const int moveDelay = 120; // ms between moves
+unsigned long holdStartTime = 0;
+bool isHoldingButton = false;
 
 extern const char pieces_S_l[2][2][4];;
 extern const char pieces_S_r[2][2][4];
@@ -302,35 +304,47 @@ void softDrop() {
 }
 
 void holdBlocks() {
-  // Only trigger if the button is pressed
-  if (!digitalRead(B_2)) {  // INPUT_PULLUP assumed, LOW when pressed
-    if (holdButtonReady) {
-      // Don't execute if the game is over, paused, or already held this turn
-      if (!canHold || isGameOver) return;
-
-      if (holdType == -1) {
-        // If hold is empty, stash the current piece and generate a new one
-        holdType = currentType;
-        generate(); // Your existing generate function fetches the next piece
-      } else {
-        // Swap the current piece with the held piece
-        short temp = currentType;
-        currentType = holdType;
-        holdType = temp;
-
-        // Reset position and rotation
-        pieceX = 3;
-        pieceY = 0;
-        rotation = 0;
-        copyPiece(piece, currentType, rotation);
-      }
-
-      canHold = false;   // Prevent holding again until the next piece locks
-      refreshGrid();     // Update the display
-      holdButtonReady = false;  // wait for release
+  if (!digitalRead(B_2)) {  // Button pressed (LOW)
+    
+    if (!isHoldingButton) {
+      // First moment button is pressed
+      holdStartTime = millis();
+      isHoldingButton = true;
     }
+
+    // Check if held for 2 seconds
+    if (isHoldingButton && (millis() - holdStartTime >= 2000)) {
+
+      if (holdButtonReady) {
+        // Prevent invalid states
+        if (!canHold || isGameOver) return;
+
+        if (holdType == -1) {
+          // Store current piece
+          holdType = currentType;
+          generate();
+        } else {
+          // Swap pieces
+          short temp = currentType;
+          currentType = holdType;
+          holdType = temp;
+
+          pieceX = 3;
+          pieceY = 0;
+          rotation = 0;
+          copyPiece(piece, currentType, rotation);
+        }
+
+        canHold = false;
+        refreshGrid();
+
+        holdButtonReady = false;  // prevent repeat trigger
+      }
+    }
+
   } else {
-    // Button released → ready for next press
+    // Button released → reset state
+    isHoldingButton = false;
     holdButtonReady = true;
   }
 }
@@ -373,7 +387,7 @@ void handleLeftRight() {
     }
   }
   // RIGHT button
-  else if (!digitalRead(RIGHT)) {
+  if (!digitalRead(RIGHT)) {
     if (!nextHorizontalCollision(piece, 1)) {
       pieceX++;
       refreshGrid();

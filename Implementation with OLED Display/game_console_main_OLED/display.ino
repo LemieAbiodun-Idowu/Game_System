@@ -140,8 +140,8 @@ void drawGhostPiece(short x, short y) {
 
 void drawHoldPiece() {
   // Draw the Hold box
-  const int HOLD_X = 28; // X position of the hold box
-  const int HOLD_Y = 2;  // Y position
+  const int HOLD_X = 2; // X position of the hold box
+  const int HOLD_Y = 54;  // Y position
   const int HOLD_WIDTH = 24;
   const int HOLD_HEIGHT = 20;
 
