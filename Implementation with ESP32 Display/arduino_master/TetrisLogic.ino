@@ -151,7 +151,11 @@ void resetGame() {
 
   score = 0;
   interval = 500;
+<<<<<<< Updated upstream
   display.fillScreen(TFT_BLACK); 
+=======
+
+>>>>>>> Stashed changes
   nextType = random(TYPES);
   generate();
   isGameOver = false;
