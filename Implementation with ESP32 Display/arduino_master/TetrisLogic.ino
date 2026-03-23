@@ -1,4 +1,4 @@
-#include <TFT_eSPI.h>
+// #include <TFT_eSPI.h>
 
 // 1. Memory Optimization: The Grid
 byte grid[10][18];
@@ -19,27 +19,27 @@ int8_t piece[2][4];
 int8_t holdType = -1;
 bool b3 = true; 
 
-// Point to the screen object created in display.ino
-extern TFT_eSPI display;
+// // Point to the screen object created in display.ino
+// extern TFT_eSPI display;
 
 // References to controls and pieces defined in other files
 extern int x_point, y_point;
 extern int deadZone;
-extern int JOY_B, B_1, B_2; // Ensure these match your actual pin variable types
+extern int B_1, B_2; // Ensure these match your actual pin variable types
 
-extern const char pieces_S_l[2][2][4];
-extern const char pieces_S_r[2][2][4];
-extern const char pieces_L_l[4][2][4];
-extern const char pieces_Sq[1][2][4];
-extern const char pieces_T[4][2][4];
-extern const char pieces_l[2][2][4];
+extern const char pieces_S_l;
+extern const char pieces_S_r;
+extern const char pieces_L_l;
+extern const char pieces_Sq;
+extern const char pieces_T;
+extern const char pieces_l;
 
 // --- External Functions ---
 extern void refreshGrid();
 extern void displayGameOver();
 
 void initialiseGame() {
-  randomSeed(analogRead(34)); 
+  randomSeed(analogRead(0) + analogRead(A0)); //Why would analog 0 break it?
   nextType = random(TYPES);
   generate();
   timer = millis();
@@ -55,7 +55,7 @@ void checkGameOver() {
 }
 
 void hardDrop() {
-  if (!digitalRead(JOY_B)) { 
+  if (!digitalRead() { 
     while (!nextCollision()) {
       pieceY++;
     }
@@ -151,11 +151,11 @@ void resetGame() {
 
   score = 0;
   interval = 500;
-<<<<<<< Updated upstream
-  display.fillScreen(TFT_BLACK); 
-=======
 
->>>>>>> Stashed changes
+  // display.fillScreen(TFT_BLACK); //This should send reset game or equivalent to esp 
+
+
+
   nextType = random(TYPES);
   generate();
   isGameOver = false;
