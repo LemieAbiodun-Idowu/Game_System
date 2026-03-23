@@ -28,11 +28,6 @@ extern HardwareSerial mySerial;
 
 
 
-
-
-
-
-
 void touchscreensetup() {
   // Start the SPI for the touchscreen and init the touchscreen
   touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
