@@ -7,9 +7,7 @@ extern short holdType;
 
 void UARTsetup() {
   // Starts hardware serial on Pins 0 (RX) and 1 (TX)
-  Serial.begin(115200);     
-  
-  // Serial.println("INIT"); // Wakes up the ESP32 screen!
+  Serial.begin(38400);     
 }
 
 void failedCardMsg() {
@@ -34,7 +32,7 @@ void refreshGrid() {
 
   // 2. Add active falling piece
   for (int i = 0; i < 4; i++) {
-    int px = pieceX + piece[i]; 
+    int px = pieceX + piece[i][1];
     int py = pieceY + piece[1][i];
     if (px >= 0 && px < 10 && py >= 0 && py < 18) {
       tempBoard[px][py] = 1;

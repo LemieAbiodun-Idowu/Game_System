@@ -1,13 +1,11 @@
 HardwareSerial mySerial(2);
 
 void UARTsetup() {
-  // Listen to pins 35 (RX) and 22 (TX)
-  mySerial.begin(115200, SERIAL_8N1, 35, 22);
+  // Set baud to 38400 (stable) and INCREASE buffer to 512 bytes
+  mySerial.begin(38400, SERIAL_8N1, 35, 22);
+  mySerial.setRxBufferSize(512); 
 
-  // Draw the splash screen message ONCE and move on
   displayDefMsg();
-  
-  // REMOVED: The while(!mySerial.available()) trap loop is gone!
 }
 
 // Run this constantly in the ESP32 loop()
