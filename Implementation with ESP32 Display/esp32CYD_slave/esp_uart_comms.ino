@@ -1,21 +1,22 @@
 HardwareSerial mySerial(2);
 
 void UARTsetup() {
-  // Listen to the CYD's hardware pins 35 (RX) and 22 (TX)
+  // Listen to pins 35 (RX) and 22 (TX)
   mySerial.begin(115200, SERIAL_8N1, 35, 22);
 
-  // Draw the splash screen message ONCE
+  // Draw the splash screen message ONCE and move on
   displayDefMsg();
-
+  
+  // REMOVED: The while(!mySerial.available()) trap loop is gone!
 }
 
 // Run this constantly in the ESP32 loop()
 void listenToArduino() {
   if (mySerial.available()) {
     String data = mySerial.readStringUntil('\n');
-    data.trim(); // Clean up hidden newlines from the Serial transmission
+    data.trim(); // Clean up hidden newlines
 
-    // Route the incoming data to the correct display functions
+    // Route the data - If it's random noise, it safely ignores it!
     if (data.startsWith("G:")) {
       updateTetrisGrid(data.substring(2));
     } 
