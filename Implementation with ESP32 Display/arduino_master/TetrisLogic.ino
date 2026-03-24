@@ -1,6 +1,4 @@
-
-
-byte grid[10][18];
+byte grid[10][25];
 int interval = 500;
 int score = 0;
 bool isGameOver = false;
@@ -139,7 +137,7 @@ void PieceRotation() {
 
 void resetGame() {
   for (short x = 0; x < 10; x++)
-    for (short y = 0; y < 18; y++)
+    for (short y = 0; y < 25; y++)
       grid[x][y] = 0;
   
   score = 0;
@@ -166,7 +164,7 @@ void generate() {
 
 void checkLines() {
   bool full;
-  for (short y = 17; y >= 0; y--) {
+  for (short y = 24; y >= 0; y--) {
     full = true;
     for (short x = 0; x < 10; x++) {
       full = full && grid[x][y];
@@ -203,7 +201,7 @@ bool nextCollision() {
   for (short i = 0; i < 4; i++) {
     short y = pieceY + piece[1][i] + 1;
     short x = pieceX + piece[0][i];
-    if (y > 17 || grid[x][y])
+    if (y > 24 || grid[x][y])
       return true;
   }
   return false;

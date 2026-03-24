@@ -97,7 +97,7 @@ const int NEXT_Y = 60;
 const int HOLD_X = 150;
 const int HOLD_Y = 130;
 
-char prevGrid[180] = {0};
+char prevGrid[250] = {0};
 
 // --- PIECES ---
 const char esp_pieces_S_l[2][2][4] = {
@@ -160,16 +160,12 @@ void copyEspPiece(int8_t p[2][4], int type) {
 
 void drawGameLayout() {
   tft.fillScreen(TFT_BLACK);
-
-  tft.drawRect(GRID_X - 2, GRID_Y - 2, (10 * BLOCK_WIDTH) + 4, (18 * BLOCK_HEIGHT) + 4, TFT_WHITE);
-
+  tft.drawRect(GRID_X - 2, GRID_Y - 2, (10 * BLOCK_WIDTH) + 4, (25 * BLOCK_HEIGHT) + 4, TFT_WHITE);
   tft.drawRect(SCORE_X, SCORE_Y, 80, 40, TFT_WHITE);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString("SCORE", SCORE_X + 5, SCORE_Y + 5, 1);
-
   tft.drawRect(NEXT_X, NEXT_Y, 80, 60, TFT_WHITE);
   tft.drawString("NEXT", NEXT_X + 5, NEXT_Y + 5, 1);
-
   tft.drawRect(HOLD_X, HOLD_Y, 80, 60, TFT_WHITE);
   tft.drawString("HOLD", HOLD_X + 5, HOLD_Y + 5, 1);
 }
@@ -177,11 +173,11 @@ void drawGameLayout() {
 // ==========================================
 
 void updateTetrisGrid(String newGrid) {
-  if (newGrid.length() != 180) return;
+  if (newGrid.length() != 250) return;
 
   int charIndex = 0;
 
-  for (int y = 0; y < 18; y++) {
+  for (int y = 0; y < 25; y++) {
     for (int x = 0; x < 10; x++) {
 
       char currentState = newGrid.charAt(charIndex);

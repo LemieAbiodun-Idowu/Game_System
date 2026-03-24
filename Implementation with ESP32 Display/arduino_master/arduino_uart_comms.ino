@@ -1,4 +1,4 @@
-extern byte grid[10][18];
+extern byte grid[10][25];
 extern short pieceX, pieceY;
 extern short piece[2][4];
 extern int score;
@@ -21,27 +21,27 @@ void passedCardMsg(int CardNumber) {
 }
 
 void refreshGrid() {
-  byte tempBoard[10][18];
+  byte tempBoard[10][25];
   
   // 1. Copy static board
   for (int x = 0; x < 10; x++) {
-    for (int y = 0; y < 18; y++) {
+    for (int y = 0; y < 25; y++) {
       tempBoard[x][y] = grid[x][y];
     }
   }
 
   // 2. Add active falling piece
   for (int i = 0; i < 4; i++) {
-    int px = pieceX + piece[i][1];
+    int px = pieceX + piece[0][i];
     int py = pieceY + piece[1][i];
-    if (px >= 0 && px < 10 && py >= 0 && py < 18) {
+    if (px >= 0 && px < 10 && py >= 0 && py < 25) {
       tempBoard[px][py] = 1;
     }
   }
 
   // 3. Send Grid to ESP32
   Serial.print("G:");
-  for (int y = 0; y < 18; y++) {
+  for (int y = 0; y < 25; y++) {
     for (int x = 0; x < 10; x++) {
       Serial.print(tempBoard[x][y]);
     }
