@@ -53,3 +53,39 @@ void cardScanning() {
     }
   }
 }
+
+void checkPowerUpCard() {
+  if (!mfrc522.PICC_IsNewCardPresent()) return;
+  if (!mfrc522.PICC_ReadCardSerial()) return;
+
+  int matchedIndex = -1;
+  for (uint8_t j = 0; j < NUM_CARDS; j++) {
+    bool cardMatch = true;
+    for (uint8_t i = 0; i < mfrc522.uid.size; i++) {
+      if (mfrc522.uid.uidByte[i] != pgm_read_byte(&(UID_Cards[j][i]))) {
+        cardMatch = false;
+        break;
+      }
+    }
+    if (cardMatch) {
+      matchedIndex = j + 1;
+      break;
+    }
+  }
+
+  if (matchedIndex == 2) { //card 2 is double points
+    activateDoublePoints();
+  }
+
+  if (matchedIndex == 3) { //card 3 is clear line
+    clearBottomThreeLines();
+    Serial.println("POWERUP:CLEAR");
+  }
+
+  if (matchedIndex == 4) { // card 4 is slow gravity
+    activateSlowGravity();
+  }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+}

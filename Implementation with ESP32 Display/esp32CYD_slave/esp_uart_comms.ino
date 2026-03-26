@@ -1,10 +1,13 @@
 HardwareSerial mySerial(2);
+int nextEspType = 0; 
+int activeEspType = 0;
+int activeEspRotation = 0;
+int activeEspX = 0;
 
-void UARTsetup() {
   // Set baud to 38400 (stable) and INCREASE buffer to 512 bytes
+void UARTsetup() {
+  mySerial.setRxBufferSize(512);
   mySerial.begin(38400, SERIAL_8N1, 35, 22);
-  mySerial.setRxBufferSize(512); 
-
   displayDefMsg();
 }
 
@@ -22,8 +25,9 @@ void listenToArduino() {
       updateScore(data.substring(2));
     } 
     else if (data.startsWith("N:")) {
-      drawNextPiece(data.substring(2).toInt());
-    } 
+      nextEspType = data.substring(2).toInt();
+      drawNextPiece(nextEspType);
+    }
     else if (data.startsWith("H:")) {
       drawHoldPiece(data.substring(2).toInt());
     } 
@@ -40,7 +44,35 @@ void listenToArduino() {
       cardMsgDisplay(0);
     } 
     else if (data.startsWith("CRD:")) {
-      cardMsgDisplay(1, (char*)data.substring(4).c_str());
+      String cardNum = data.substring(4);
+      cardMsgDisplay(1, (char*)cardNum.c_str());
+    }
+    else if (data.startsWith("GY:")) {
+      int ghostY = data.substring(3).toInt();
+      int8_t gPiece[2][4];
+      copyEspPiece(gPiece, activeEspType, activeEspRotation);
+      updateGhostPiece(ghostY, activeEspX, gPiece);
+    }
+    else if (data.startsWith("CT:")) {
+      activeEspType = data.substring(3).toInt();
+    }
+    else if (data.startsWith("CR:")) {
+      activeEspRotation = data.substring(3).toInt();
+    }
+    else if (data.startsWith("CX:")) {
+      activeEspX = data.substring(3).toInt();
+    }
+    else if (data.startsWith("LV:")) {
+      updateLevel(data.substring(3).toInt());
+    }
+    else if (data == "POWERUP:CLEAR") {
+      showClearLineMsg();
+    }
+    else if (data == "POWERUP:DOUBLE") {
+      showDoublePointsMsg();
+    }
+    else if (data == "POWERUP:SLOW") {
+      showSlowGravityMsg();
     }
   }
 }

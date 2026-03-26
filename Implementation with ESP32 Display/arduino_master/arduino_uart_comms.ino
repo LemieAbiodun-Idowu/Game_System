@@ -5,6 +5,7 @@ extern int score;
 extern word nextType;
 extern short holdType;
 
+
 void UARTsetup() {
   // Starts hardware serial on Pins 0 (RX) and 1 (TX)
   Serial.begin(38400);     
@@ -39,6 +40,11 @@ void refreshGrid() {
     }
   }
 
+  Serial.print("CT:"); Serial.println(currentType);
+  Serial.print("CR:"); Serial.println(rotation);
+  Serial.print("CX:"); Serial.println(pieceX);
+  Serial.print("GY:"); Serial.println(getGhostY());
+
   // 3. Send Grid to ESP32
   Serial.print("G:");
   for (int y = 0; y < 25; y++) {
@@ -52,4 +58,13 @@ void refreshGrid() {
   Serial.print("S:"); Serial.println(score);
   Serial.print("N:"); Serial.println(nextType);
   Serial.print("H:"); Serial.println(holdType);
+  Serial.print("LV:"); Serial.println(level);
+
+}
+
+void sendInformation(){
+  Serial.print("CT:"); Serial.println(currentType); //sends information every loop
+  Serial.print("CR:"); Serial.println(rotation);
+  Serial.print("CX:"); Serial.println(pieceX);
+  Serial.print("GY:"); Serial.println(getGhostY());
 }

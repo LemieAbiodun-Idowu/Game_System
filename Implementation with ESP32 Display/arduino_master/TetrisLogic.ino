@@ -11,7 +11,7 @@ short piece[2][4];
 //extern int x_point, y_point;
 //extern int deadZone;
 unsigned long lastSoftDropTime = 0;
-const int softDropSpeed = 100; // ms between moves
+const int softDropSpeed = 400; // ms between moves
 short holdType = -1; // minus means hold slot is empty
 bool canHold = true; // Prevents holding more than once per drop
 bool holdButtonReady = true; // track if the button can trigger a hold
@@ -19,6 +19,19 @@ unsigned long lastMoveTime = 0;
 const int moveDelay = 120; // ms between moves
 unsigned long holdStartTime = 0;
 bool isHoldingButton = false;
+int level = 1;
+int comboCount = -1; // -1 means no active combo
+
+
+// 3 types of powerups - doublePoints, clearLine, slowGravity
+// doublePoints doubles points gathered from breakLine for 10s - card 2
+// clear line clears bottom three lines and gives points cleared for a triple line - card 3
+// slowGravity slows the gravity for 10s - card 4
+bool doublePointsActive = false;
+unsigned long doublePointsStart = 0;
+bool slowGravityActive = false;
+unsigned long slowGravityStart = 0;
+
 
 extern const char pieces_S_l[2][2][4];;
 extern const char pieces_S_r[2][2][4];
@@ -57,11 +70,13 @@ void checkGameOver() {
 
 void hardDrop() {
   if (!digitalRead(UP)) {  // button pressed (INPUT_PULLUP)
-
+    int cellsDropped = 0;
     // Move piece down until collision
     while (!nextCollision()) {
       pieceY++;
+      cellsDropped++;
     }
+    score += 2 * cellsDropped; // 2 points per cell
 
     // Lock piece into grid
     for (short i = 0; i < 4; i++) {
@@ -82,8 +97,16 @@ void hardDrop() {
 
 void updatePieceGravity() {
   if(isPaused || isGameOver) return;
+
+  if (slowGravityActive) {
+    interval = 1500; // slow
+  }else {
+    interval = max(100, 500 - ((level - 1) * 50)); // gets faster each level, minimum 100ms
+  }
+
   if (millis() - timer > interval) {
     checkLines();
+
     refreshGrid();
     if (nextCollision()) {
       for (short i = 0; i < 4; i++)
@@ -98,21 +121,6 @@ void updatePieceGravity() {
     timer = millis();
   }
 }
-
-// void deadzone() { // Collision Blocks Identifier
-//   if(isPaused || isGameOver) return;
-//   if (x_point < 32 - deadZone) {
-//     if (!nextHorizontalCollision(piece, -1)) {
-//       pieceX--;
-//       refreshGrid();
-//     }
-//   } else if (x_point > 32 + deadZone) {
-//     if (!nextHorizontalCollision(piece, 1)) {
-//       pieceX++;
-//       refreshGrid();
-//     }
-//   }
-// }
 
 void PieceRotation() {
   if (!digitalRead(B_1)) {  //assign to change
@@ -160,19 +168,48 @@ void generate() {
   rotation = 0;
   copyPiece(piece, currentType, rotation);
   canHold = true; // ADDED: Player can use hold again for this new piece
+  Serial.print("CT:"); Serial.println(currentType);
+  Serial.print("CR:"); Serial.println(rotation);
+  Serial.print("CX:"); Serial.println(pieceX);
 }
 
 void checkLines() {
-  bool full;
+  int linesCleared = 0;
+
   for (short y = 24; y >= 0; y--) {
-    full = true;
+    bool full = true;
     for (short x = 0; x < 10; x++) {
       full = full && grid[x][y];
     }
     if (full) {
       breakLine(y);
       y++;
+      linesCleared++;
     }
+  }
+
+  if (linesCleared > 0) {
+    comboCount++;
+
+  	int multiplier = doublePointsActive ? 2 : 1;
+    // Base score by lines cleared
+    switch (linesCleared) {
+      case 1: score += 100 * level * multiplier; break;  // Single
+      case 2: score += 300 * level * multiplier; break;  // Double
+      case 3: score += 500 * level * multiplier; break;  // Triple
+      case 4: score += 800 * level * multiplier; break;  // Tetris
+    }
+
+    // Combo bonus
+    if (comboCount > 0) {
+      score += 50 * comboCount * level * multiplier;
+    }
+
+    // Increase level every 10 lines
+    level = (score / 1000) + 1;
+
+  } else {
+    comboCount = -1; // reset combo if no lines cleared
   }
 }
 void breakLine(short line) {
@@ -181,12 +218,9 @@ void breakLine(short line) {
       grid[x][y] = grid[x][y - 1];
     }
   }
-
   for (short x = 0; x < 10; x++) {
     grid[x][0] = 0;
   }
-  
-  score += 10;
 }
 
 bool nextHorizontalCollision(short piece[2][4], int amount) {
@@ -284,6 +318,7 @@ void softDrop() {
 
       if (!nextCollision()) {
         pieceY++;
+        score += 1; // 1 point per cell soft drop
       } else {
         // lock piece if it hits something
         for (short i = 0; i < 4; i++) {
@@ -313,7 +348,7 @@ void holdBlocks() {
     }
 
     // Check if held for 2 seconds
-    if (isHoldingButton && (millis() - holdStartTime >= 2000)) {
+    if (isHoldingButton && (millis() - holdStartTime >= 1000)) {
 
       if (holdButtonReady) {
         // Prevent invalid states
@@ -355,7 +390,7 @@ bool checkCollisionAt(short simY) {
     short y = simY + piece[1][i] + 1; // Check the next step down
     short x = pieceX + piece[0][i];
     
-    if (y > 17 || grid[x][y]) {
+    if (y > 24 || grid[x][y]) {
       return true; // Collision detected
     }
   }
@@ -395,4 +430,49 @@ void handleLeftRight() {
     }
   }
 }
+//========================================
+// POWERUPS
+//=========================================
 
+void clearBottomThreeLines() {
+  for (short y = 22; y <= 24; y++) {
+    for (short x = 0; x < 10; x++) {
+      grid[x][y] = 0;
+    }
+  }
+
+  // Shift all rows above y=22 down by 3
+  for (short y = 21; y >= 0; y--) {
+    for (short x = 0; x < 10; x++) {
+      grid[x][y + 3] = grid[x][y];
+      grid[x][y] = 0;
+    }
+  }
+
+  score += 500 * level;
+  refreshGrid();
+}
+
+void activateDoublePoints() {
+  doublePointsActive = true;
+  doublePointsStart = millis();
+  Serial.println("POWERUP:DOUBLE");
+}
+
+void checkDoublePoints() {
+  if (doublePointsActive && millis() - doublePointsStart >= 10000) {
+    doublePointsActive = false;
+  }
+}
+
+void activateSlowGravity() {
+  slowGravityActive = true;
+  slowGravityStart = millis();
+  Serial.println("POWERUP:SLOW");
+}
+
+void checkSlowGravity() {
+  if (slowGravityActive && millis() - slowGravityStart >= 10000) {
+    slowGravityActive = false;
+  }
+}

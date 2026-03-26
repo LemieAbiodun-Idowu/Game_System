@@ -7,13 +7,13 @@
 
 // int JOY_B = 2; //No longer exists
 int B_1 = 7;      //rotate
-int B_2 = 8;      //speed
+int B_2 = 8;      //pause and hold
 
 
-int UP = 2; //change pins
-int DOWN = 15;
-int LEFT = 17;
-int RIGHT = 14;
+int UP = 5; //change pins
+int DOWN = 3;
+int LEFT = 4;
+int RIGHT = 2;
 // int BUZZER = 8;
 
 bool b1, b2, b3;    //Find out what these do and give them better names
@@ -37,6 +37,13 @@ void loop() {
   PauseButton();
   if(isPaused) return;
 
+  //powerups
+  checkDoublePoints();
+  checkPowerUpCard();
+  checkSlowGravity();
+
+  //send tetris piece information
+  sendInformation();
   //inputs
   handleLeftRight();
   softDrop();

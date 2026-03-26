@@ -5,14 +5,16 @@
 #include "SD.h"  //Using SD cards
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(38400);
   touchscreensetup();
   displaysetup();
   UARTsetup();
   // cardScanMsg();
   // drawGameLayout();
+  displayDefMsg();
 }
 
 void loop(){
   listenToArduino();
+  clearPowerUpMsg();
 }

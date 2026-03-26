@@ -14,10 +14,16 @@ void controlsSetup(){
 void PauseButton() {
   if (!digitalRead(B_2)) {
     if (pauseButtonReady) {
-      isPaused = !isPaused;
       pauseButtonReady = false;
-      delay(200);
-      
+      unsigned long pressStart = millis();
+
+      // Wait to see how long the button is held
+      while (!digitalRead(B_2)) {
+        if (millis() - pressStart > 1000) return; // held too long, ignore
+      }
+
+      // Only toggle if released before 2 seconds
+      isPaused = !isPaused;
       if (isPaused) {
         Serial.println("STATE:PAUSE");
       } else {
