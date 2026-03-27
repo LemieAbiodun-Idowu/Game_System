@@ -207,16 +207,22 @@ void updateTetrisGrid(String newGrid) {
         int xPos = GRID_X + (x * BLOCK_WIDTH);
         int yPos = GRID_Y + (y * BLOCK_HEIGHT);
 
-        if (currentState == '1') {
-          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_CYAN);
-        } 
-        else if (currentState == '2') {
-          tft.drawRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
-        } 
-        else {
-          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
+        uint16_t blockColor;
+        switch (currentState) {
+          case '1': blockColor = TFT_ORANGE;  break; // Type 0: L-Piece
+          case '2': blockColor = TFT_GREEN;   break; // Type 1: S-left
+          case '3': blockColor = TFT_RED;     break; // Type 2: S-right
+          case '4': blockColor = TFT_YELLOW;  break; // Type 3: Square
+          case '5': blockColor = TFT_MAGENTA; break; // Type 4: T-piece
+          case '6': blockColor = TFT_CYAN;    break; // Type 5: I-piece (Line)
+          default:  blockColor = TFT_BLACK;   break; // Empty space
         }
 
+        if (blockColor != TFT_BLACK) {
+          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, blockColor);
+        } else {
+          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
+        }
         prevGrid[charIndex] = currentState;
       }
 

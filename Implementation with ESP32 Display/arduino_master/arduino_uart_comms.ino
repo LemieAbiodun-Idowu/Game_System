@@ -36,7 +36,7 @@ void refreshGrid() {
     int px = pieceX + piece[0][i];
     int py = pieceY + piece[1][i];
     if (px >= 0 && px < 10 && py >= 0 && py < 25) {
-      tempBoard[px][py] = 1;
+      tempBoard[px][py] = currentType + 1;
     }
   }
 

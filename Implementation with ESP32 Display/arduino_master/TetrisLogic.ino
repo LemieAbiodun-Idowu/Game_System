@@ -79,7 +79,7 @@ void hardDrop() {
 
     // Lock piece into grid
     for (short i = 0; i < 4; i++) {
-      grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
+      grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
     }
 
     generate();
@@ -114,7 +114,7 @@ void updatePieceGravity() {
     refreshGrid();
     if (nextCollision()) {
       for (short i = 0; i < 4; i++)
-        grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
+        grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
       generate();
       if (spawnCollision()) {
         displayGameOver();
@@ -327,7 +327,7 @@ void softDrop() {
       } else {
         // lock piece if it hits something
         for (short i = 0; i < 4; i++) {
-          grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = 1;
+          grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
         }
 
         generate();
