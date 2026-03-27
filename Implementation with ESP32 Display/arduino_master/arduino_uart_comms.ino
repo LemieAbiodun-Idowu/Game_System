@@ -1,7 +1,7 @@
 extern byte grid[10][25];
 extern short pieceX, pieceY;
 extern short piece[2][4];
-extern int score;
+extern unsigned long score;
 extern word nextType;
 extern short holdType;
 

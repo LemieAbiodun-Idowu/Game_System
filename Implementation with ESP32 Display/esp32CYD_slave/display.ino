@@ -231,14 +231,14 @@ void updateScore(String scoreTxt) {
   tft.drawRect(SCORE_X, SCORE_Y, 80, 38, TFT_WHITE);
   tft.drawRect(SCORE_X, SCORE_Y, 58, 38, TFT_WHITE);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(scoreTxt, SCORE_X + 5, SCORE_Y + 15, 2);
+  tft.drawString(scoreTxt, SCORE_X + 5, SCORE_Y + 18, 1);
 }
 
 void updateLevel(int lvl) {
   tft.fillRect(SCORE_X + 64, SCORE_Y + 15, 50, 15, TFT_BLACK);
   tft.drawRect(SCORE_X, SCORE_Y, 80, 38, TFT_WHITE);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(String(lvl), SCORE_X + 64, SCORE_Y + 15, 2);
+  tft.drawString(String(lvl), SCORE_X + 64, SCORE_Y + 18, 1);
 }
 
 // ==========================================
@@ -312,9 +312,12 @@ void updateGhostPiece(int ghostY, int ghostX, int8_t gPiece[2][4]) {
     int x = ghostX + gPiece[0][i];
     int y = ghostY + gPiece[1][i];
     if (x >= 0 && x < 10 && y >= 0 && y < 25) {
-      tft.drawRect(GRID_X + (x * BLOCK_WIDTH), GRID_Y + (y * BLOCK_HEIGHT),
-                   BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
-      prevGrid[y * 10 + x] = '3';
+      int idx = y * 10 + x;
+      if (prevGrid[idx] != '1') {  // only draw if no active piece here
+        tft.drawRect(GRID_X + (x * BLOCK_WIDTH), GRID_Y + (y * BLOCK_HEIGHT),
+                     BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
+        prevGrid[idx] = '3';
+      }
     }
   }
 }

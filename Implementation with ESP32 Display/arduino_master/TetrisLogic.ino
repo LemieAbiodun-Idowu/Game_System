@@ -1,6 +1,6 @@
 byte grid[10][25];
 int interval = 500;
-int score = 0;
+unsigned long score = 0;
 bool isGameOver = false;
 long timer, delayer;
 const short TYPES = 6;  //type of pieces used
@@ -22,10 +22,9 @@ bool isHoldingButton = false;
 int level = 1;
 int comboCount = -1; // -1 means no active combo
 
-
 // 3 types of powerups - doublePoints, clearLine, slowGravity
 // doublePoints doubles points gathered from breakLine for 10s - card 2
-// clear line clears bottom three lines and gives points cleared for a triple line - card 3
+// clear line clears bottom three lines - card 3
 // slowGravity slows the gravity for 10s - card 4
 bool doublePointsActive = false;
 unsigned long doublePointsStart = 0;
@@ -101,7 +100,12 @@ void updatePieceGravity() {
   if (slowGravityActive) {
     interval = 1500; // slow
   }else {
-    interval = max(100, 500 - ((level - 1) * 50)); // gets faster each level, minimum 100ms
+    if(interval > 100){
+      interval = max(100, 500 - ((level - 1) * 50)); // gets faster each level, minimum 100ms
+    }
+    else{
+      interval = interval = max(50, 100 - ((level - 1) * 2)); //gets faster more slowly after level 10
+    }
   }
 
   if (millis() - timer > interval) {
@@ -153,6 +157,7 @@ void resetGame() {
   holdType = -1;    
   canHold = true;
   nextType = random(TYPES);
+  level = 1;
   generate();
   isGameOver = false;
 
@@ -449,7 +454,6 @@ void clearBottomThreeLines() {
     }
   }
 
-  score += 500 * level;
   refreshGrid();
 }
 
