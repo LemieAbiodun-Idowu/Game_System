@@ -69,6 +69,7 @@ void refreshGrid() {
   Serial.print("N:"); Serial.println(nextType);
   Serial.print("H:"); Serial.println(holdType);
   Serial.print("LV:"); Serial.println(level);
+  Serial.print("TH:"); Serial.println(currentTheme);
 }
 
 void sendInformation(){

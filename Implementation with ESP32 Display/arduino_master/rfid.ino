@@ -2,6 +2,8 @@
 #define SS_PIN 10
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 
+extern int currentTheme; // Reference the theme variable from TetrisLogic
+
 void setupRFID() {
   SPI.begin();         // <-- CRITICAL FIX: Start the SPI bus!
   pinMode(SS_PIN, OUTPUT);
@@ -84,6 +86,19 @@ void checkPowerUpCard() {
 
   if (matchedIndex == 4) { // card 4 is slow gravity
     activateSlowGravity();
+  }
+
+  if (matchedIndex == 5) { // Card 5 activates Neon Theme
+    currentTheme = 1;
+    refreshGrid(); 
+  }
+  if (matchedIndex == 6) { // Card 6 activates Gameboy Theme
+    currentTheme = 2;
+    refreshGrid(); 
+  }
+  if (matchedIndex == 7) { // Card 7 resets to Default Theme
+    currentTheme = 0;
+    refreshGrid(); 
   }
 
   mfrc522.PICC_HaltA();

@@ -4,9 +4,8 @@
 TFT_eSPI tft = TFT_eSPI();
 
 int centerX = SCREEN_HEIGHT / 2;
-int centerY =  SCREEN_WIDTH/ 2;
+int centerY =  SCREEN_WIDTH / 2;
 
-// Touchscreen pins
 #define XPT2046_IRQ 36   
 #define XPT2046_MOSI 32  
 #define XPT2046_MISO 39  
@@ -25,9 +24,12 @@ bool backgroundBlack = true;
 
 extern HardwareSerial mySerial;
 
-// ==========================================
-// SETUP
-// ==========================================
+int currentTheme = 0; 
+
+// --- GAME OVER TRACKERS ---
+bool isGameOverState = false;
+String currentScoreStr = "0";
+int currentLevelDisp = 1;
 
 void touchscreensetup() {
   touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
@@ -40,10 +42,6 @@ void displaysetup() {
   tft.setRotation(2);
   tft.setSwapBytes(true);
 }
-
-// ==========================================
-// DISPLAY MESSAGES
-// ==========================================
 
 void displayDefMsg() {
   if (!backgroundBlack) {
@@ -62,28 +60,17 @@ void cardMsgDisplay(bool signal, char* cardNumber = NULL) {
   if (!signal) {
     tft.drawCentreString(NEG_CARD_SCAN_MSG, centerX, centerY, DEFAULT_FONT);
     delay(2000);
-
-    while (!mySerial.available()) {
-      delay(50); // prevent freeze
-    }
-
+    while (!mySerial.available()) { delay(50); }
     displayDefMsg();
-
   } else {
     char full_pos_msg[64];
     snprintf(full_pos_msg, sizeof(full_pos_msg), "%s%s", POS_CARD_SCAN_MSG, cardNumber);
-
     tft.drawCentreString(full_pos_msg, centerX, centerY, DEFAULT_FONT);
     delay(3000);
-
     tft.fillScreen(TFT_BLACK);
     drawGameLayout();
   }
 }
-
-// ==========================================
-// TETRIS DISPLAY
-// ==========================================
 
 const int GRID_X = 10;
 const int GRID_Y = 10;
@@ -101,43 +88,12 @@ const int HOLD_Y  = 250;
 
 char prevGrid[250] = {0};
 
-// --- PIECES ---
-const char esp_pieces_S_l[2][2][4] = {
-  { {0,0,1,1}, {0,1,1,2} },
-  { {0,1,1,2}, {1,1,0,0} }
-};
-
-const char esp_pieces_S_r[2][2][4] = {
-  { {1,1,0,0}, {0,1,1,2} },
-  { {0,1,1,2}, {0,0,1,1} }
-};
-
-const char esp_pieces_L_l[4][2][4] = {
-  { {0,0,0,1}, {0,1,2,2} },
-  { {0,1,2,2}, {1,1,1,0} },
-  { {0,1,1,1}, {0,0,1,2} },
-  { {0,0,1,2}, {1,0,0,0} }
-};
-
-const char esp_pieces_Sq[1][2][4] = {
-  { {0,1,0,1}, {0,0,1,1} }
-};
-
-const char esp_pieces_T[4][2][4] = {
-  { {0,0,1,0}, {0,1,1,2} },
-  { {0,1,1,2}, {1,0,1,1} },
-  { {1,0,1,1}, {0,1,1,2} },
-  { {0,1,1,2}, {0,0,1,0} }
-};
-
-const char esp_pieces_l[2][2][4] = {
-  { {0,1,2,3}, {0,0,0,0} },
-  { {0,0,0,0}, {0,1,2,3} }
-};
-
-// ==========================================
-// FIXED PIECE COPY
-// ==========================================
+const char esp_pieces_S_l[2][2][4] = { { {0,0,1,1}, {0,1,1,2} }, { {0,1,1,2}, {1,1,0,0} } };
+const char esp_pieces_S_r[2][2][4] = { { {1,1,0,0}, {0,1,1,2} }, { {0,1,1,2}, {0,0,1,1} } };
+const char esp_pieces_L_l[4][2][4] = { { {0,0,0,1}, {0,1,2,2} }, { {0,1,2,2}, {1,1,1,0} }, { {0,1,1,1}, {0,0,1,2} }, { {0,0,1,2}, {1,0,0,0} } };
+const char esp_pieces_Sq[1][2][4]  = { { {0,1,0,1}, {0,0,1,1} } };
+const char esp_pieces_T[4][2][4]   = { { {0,0,1,0}, {0,1,1,2} }, { {0,1,1,2}, {1,0,1,1} }, { {1,0,1,1}, {0,1,1,2} }, { {0,1,1,2}, {0,0,1,0} } };
+const char esp_pieces_l[2][2][4]   = { { {0,1,2,3}, {0,0,0,0} }, { {0,0,0,0}, {0,1,2,3} } };
 
 void copyEspPiece(int8_t p[2][4], int type, int rotation) {
   const char (*src)[2][4];
@@ -156,47 +112,39 @@ void copyEspPiece(int8_t p[2][4], int type, int rotation) {
   }
 }
 
-// ==========================================
-
-
 void drawGameLayout() {
   tft.fillScreen(TFT_BLACK);
 
-  // Main tetris grid
-  tft.drawRect(GRID_X - 2, GRID_Y - 2, (10 * BLOCK_WIDTH) + 4, (25 * BLOCK_HEIGHT) + 4, TFT_WHITE);
+  uint16_t borderColor = TFT_WHITE;
+  if (currentTheme == 1) borderColor = TFT_MAGENTA; 
+  if (currentTheme == 2) borderColor = TFT_GREEN;   
+
+  tft.drawRect(GRID_X - 2, GRID_Y - 2, (10 * BLOCK_WIDTH) + 4, (25 * BLOCK_HEIGHT) + 4, borderColor);
 
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
-  // SCORE box
-  tft.drawRect(SCORE_X, SCORE_Y, 80, 75, TFT_WHITE);
-  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, TFT_WHITE);
-  tft.drawRect(SCORE_X, SCORE_Y, 58, 38, TFT_WHITE);
-
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 75, borderColor);
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, borderColor);
+  tft.drawRect(SCORE_X, SCORE_Y, 58, 38, borderColor);
   tft.drawString("SCORE", SCORE_X + 5, SCORE_Y + 5, 1);
   tft.drawString("LV", SCORE_X + 64, SCORE_Y + 5, 1);
-
   tft.drawString("POWER UP", SCORE_X + 5, SCORE_Y + 45, 1);
 
-  // USER box
-  tft.drawRect(USER_X, USER_Y, 50, 50, TFT_WHITE);
+  tft.drawRect(USER_X, USER_Y, 50, 50, borderColor);
   tft.drawString("USER", USER_X + 5, USER_Y - 10, 1);
 
-  // NEXT box
-  tft.drawRect(NEXT_X, NEXT_Y, 80, 60, TFT_WHITE);
+  tft.drawRect(NEXT_X, NEXT_Y, 80, 60, borderColor);
   tft.drawString("NEXT", NEXT_X + 5, NEXT_Y - 10, 1);
 
-  // HOLD box
-  tft.drawRect(HOLD_X, HOLD_Y, 80, 60, TFT_WHITE);
+  tft.drawRect(HOLD_X, HOLD_Y, 80, 60, borderColor);
   tft.drawString("HOLD", HOLD_X + 5, HOLD_Y - 10, 1);
-
 }
-// ==========================================
 
 void updateTetrisGrid(String newGrid) {
+  if (isGameOverState) return; // SHIELD
   if (newGrid.length() != 250) return;
 
   int charIndex = 0;
-
   for (int y = 0; y < 25; y++) {
     for (int x = 0; x < 10; x++) {
       char currentState = newGrid.charAt(charIndex);
@@ -209,25 +157,34 @@ void updateTetrisGrid(String newGrid) {
         bool isGhost = false;
 
         switch (currentState) {
-          case '1': blockColor = TFT_ORANGE;  break; // Type 0: L-Piece
-          case '2': blockColor = TFT_GREEN;   break; // Type 1: S-left
-          case '3': blockColor = TFT_RED;     break; // Type 2: S-right
-          case '4': blockColor = TFT_YELLOW;  break; // Type 3: Square
-          case '5': blockColor = TFT_MAGENTA; break; // Type 4: T-piece
-          case '6': blockColor = TFT_CYAN;    break; // Type 5: I-piece
-          case '7': isGhost = true;           break; // Type 6: GHOST PIECE
-          default:  blockColor = TFT_BLACK;   break; // Empty space
+          case '1': blockColor = TFT_ORANGE;  break; 
+          case '2': blockColor = TFT_GREEN;   break; 
+          case '3': blockColor = TFT_RED;     break; 
+          case '4': blockColor = TFT_YELLOW;  break; 
+          case '5': blockColor = TFT_MAGENTA; break; 
+          case '6': blockColor = TFT_CYAN;    break; 
+          case '7': isGhost = true;           break; 
+          default:  blockColor = TFT_BLACK;   break; 
+        }
+
+        if (currentTheme == 2 && blockColor != TFT_BLACK && !isGhost) {
+          blockColor = TFT_GREEN;
         }
 
         if (isGhost) {
-          // Draw a hollow dark grey box for the ghost
           tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
           tft.drawRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
         } else if (blockColor != TFT_BLACK) {
-          // Draw the solid colored block
           tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, blockColor);
+
+          if (currentTheme == 1) {
+            tft.drawRect(xPos + 2, yPos + 2, BLOCK_WIDTH - 5, BLOCK_HEIGHT - 5, TFT_WHITE);
+          } 
+          else if (currentTheme == 2) {
+            tft.fillRect(xPos + 2, yPos + 2, BLOCK_WIDTH - 5, BLOCK_HEIGHT - 5, TFT_BLACK);
+            tft.fillRect(xPos + 4, yPos + 4, BLOCK_WIDTH - 9, BLOCK_HEIGHT - 9, TFT_GREEN);
+          }
         } else {
-          // Draw empty black space
           tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
         }
         
@@ -238,65 +195,114 @@ void updateTetrisGrid(String newGrid) {
   }
 }
 
-// ==========================================
-
 void updateScore(String scoreTxt) {
-  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, TFT_WHITE);
-  tft.drawRect(SCORE_X, SCORE_Y, 58, 38, TFT_WHITE);
+  if (isGameOverState) return; // SHIELD
+
+  currentScoreStr = scoreTxt; 
+
+  uint16_t borderColor = TFT_WHITE;
+  if (currentTheme == 1) borderColor = TFT_MAGENTA;
+  if (currentTheme == 2) borderColor = TFT_GREEN;
+
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, borderColor);
+  tft.drawRect(SCORE_X, SCORE_Y, 58, 38, borderColor);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString(scoreTxt, SCORE_X + 5, SCORE_Y + 18, 1);
 }
 
 void updateLevel(int lvl) {
+  if (isGameOverState) return; // SHIELD
+
+  currentLevelDisp = lvl; 
+
+  uint16_t borderColor = TFT_WHITE;
+  if (currentTheme == 1) borderColor = TFT_MAGENTA;
+  if (currentTheme == 2) borderColor = TFT_GREEN;
+
   tft.fillRect(SCORE_X + 64, SCORE_Y + 15, 50, 15, TFT_BLACK);
-  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, TFT_WHITE);
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, borderColor);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString(String(lvl), SCORE_X + 64, SCORE_Y + 18, 1);
 }
 
-// ==========================================
-
 void drawNextPiece(int nextType) {
-  tft.fillRect(NEXT_X + 2, NEXT_Y + 15, 76, 43, TFT_BLACK);
+  if (isGameOverState) return; // SHIELD
 
+  tft.fillRect(NEXT_X + 2, NEXT_Y + 15, 76, 43, TFT_BLACK);
   int8_t nPiece[2][4];
   copyEspPiece(nPiece, nextType, 0);
 
+  uint16_t pieceColor = TFT_WHITE;
+  if (currentTheme == 2) pieceColor = TFT_GREEN;
+
   for (int i = 0; i < 4; i++) {
-    tft.fillRect(
-      NEXT_X + 20 + (nPiece[0][i] * 10),
-      NEXT_Y + 20 + (nPiece[1][i] * 10),
-      9, 9, TFT_WHITE
-    );
+    int px = NEXT_X + 20 + (nPiece[0][i] * 10);
+    int py = NEXT_Y + 20 + (nPiece[1][i] * 10);
+    tft.fillRect(px, py, 9, 9, pieceColor);
+
+    if (currentTheme == 1) tft.drawRect(px + 2, py + 2, 5, 5, TFT_WHITE);
+    else if (currentTheme == 2) {
+      tft.fillRect(px + 2, py + 2, 5, 5, TFT_BLACK);
+      tft.fillRect(px + 3, py + 3, 3, 3, TFT_GREEN);
+    }
   }
 }
 
-// ==========================================
-
 void drawHoldPiece(int holdType) {
+  if (isGameOverState) return; // SHIELD
+  
   tft.fillRect(HOLD_X + 2, HOLD_Y + 15, 76, 43, TFT_BLACK);
-
   if (holdType == -1) return;
 
   int8_t hPiece[2][4];
   copyEspPiece(hPiece, holdType, 0);
 
+  uint16_t pieceColor = TFT_WHITE;
+  if (currentTheme == 2) pieceColor = TFT_GREEN;
+
   for (int i = 0; i < 4; i++) {
-    tft.fillRect(
-      HOLD_X + 20 + (hPiece[0][i] * 10),
-      HOLD_Y + 20 + (hPiece[1][i] * 10),
-      9, 9, TFT_WHITE
-    );
+    int px = HOLD_X + 20 + (hPiece[0][i] * 10);
+    int py = HOLD_Y + 20 + (hPiece[1][i] * 10);
+    tft.fillRect(px, py, 9, 9, pieceColor);
+
+    if (currentTheme == 1) tft.drawRect(px + 2, py + 2, 5, 5, TFT_WHITE);
+    else if (currentTheme == 2) {
+      tft.fillRect(px + 2, py + 2, 5, 5, TFT_BLACK);
+      tft.fillRect(px + 3, py + 3, 3, 3, TFT_GREEN);
+    }
   }
 }
 
-// ==========================================
-
 void showGameOver() {
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_RED);
-  tft.drawCentreString("GAME OVER", centerX, centerY, 4);
-  memset(prevGrid, 0, sizeof(prevGrid));
+  isGameOverState = true; 
+
+  int boxW = 180;
+  int boxH = 110;
+  int boxX = centerX - (boxW / 2);
+  int boxY = centerY - (boxH / 2);
+
+  tft.fillRect(boxX + 6, boxY + 6, boxW, boxH, tft.color565(30, 30, 30));
+
+  tft.fillRect(boxX, boxY, boxW, boxH, TFT_BLACK);
+  tft.drawRect(boxX, boxY, boxW, boxH, TFT_RED);
+  tft.drawRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2, TFT_RED);
+  tft.drawRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4, TFT_RED);
+
+  tft.setTextColor(tft.color565(100, 0, 0)); 
+  tft.drawCentreString("GAME OVER", centerX + 2, boxY + 17, 4);
+  
+  tft.setTextColor(TFT_RED); 
+  tft.drawCentreString("GAME OVER", centerX, boxY + 15, 4);
+
+  tft.setTextColor(TFT_WHITE);
+  tft.drawCentreString("FINAL SCORE", centerX, boxY + 50, 1);
+  tft.setTextColor(TFT_YELLOW);
+  tft.drawCentreString(currentScoreStr, centerX, boxY + 65, 2);
+  
+  tft.setTextColor(TFT_WHITE);
+  tft.drawCentreString("LEVEL " + String(currentLevelDisp), centerX, boxY + 85, 1);
+
+  memset(prevGrid, 0, sizeof(prevGrid)); 
 }
 
 void showPause() {
@@ -305,32 +311,7 @@ void showPause() {
 }
 
 void resumeGame() {
+  isGameOverState = false; 
   drawGameLayout();
   memset(prevGrid, 0, sizeof(prevGrid));
-}
-
-void updateGhostPiece(int ghostY, int ghostX, int8_t gPiece[2][4]) {
-  for (int y = 0; y < 25; y++) {
-    for (int x = 0; x < 10; x++) {
-      int idx = y * 10 + x;
-      if (prevGrid[idx] == '3') {
-        tft.fillRect(GRID_X + (x * BLOCK_WIDTH), GRID_Y + (y * BLOCK_HEIGHT),
-                     BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
-        prevGrid[idx] = '0';
-      }
-    }
-  }
-  // Draw new ghost
-  for (int i = 0; i < 4; i++) {
-    int x = ghostX + gPiece[0][i];
-    int y = ghostY + gPiece[1][i];
-    if (x >= 0 && x < 10 && y >= 0 && y < 25) {
-      int idx = y * 10 + x;
-      if (prevGrid[idx] != '1') {  // only draw if no active piece here
-        tft.drawRect(GRID_X + (x * BLOCK_WIDTH), GRID_Y + (y * BLOCK_HEIGHT),
-                     BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
-        prevGrid[idx] = '3';
-      }
-    }
-  }
 }

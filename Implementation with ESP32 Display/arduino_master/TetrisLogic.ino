@@ -35,6 +35,8 @@ unsigned long lockDelayStart = 0;
 bool isLocking = false;
 const int LOCK_DELAY = 200; // 500ms to slide the piece before it locks
 
+//tetris skins
+int currentTheme = 0; // NEW: 0 = Default, 1 = Neon, 2 = Gameboy
 
 extern const char pieces_S_l[2][2][4];;
 extern const char pieces_S_r[2][2][4];
@@ -493,3 +495,4 @@ void lockPiece() {
     displayGameOver();
   }
 }
+

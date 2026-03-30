@@ -47,12 +47,6 @@ void listenToArduino() {
       String cardNum = data.substring(4);
       cardMsgDisplay(1, (char*)cardNum.c_str());
     }
-    // else if (data.startsWith("GY:")) {
-    //   int ghostY = data.substring(3).toInt();
-    //   int8_t gPiece[2][4];
-    //   copyEspPiece(gPiece, activeEspType, activeEspRotation);
-    //   updateGhostPiece(ghostY, activeEspX, gPiece);
-    // }
     else if (data.startsWith("CT:")) {
       activeEspType = data.substring(3).toInt();
     }
@@ -64,6 +58,14 @@ void listenToArduino() {
     }
     else if (data.startsWith("LV:")) {
       updateLevel(data.substring(3).toInt());
+    }
+    else if (data.startsWith("TH:")) {
+      int newTheme = data.substring(3).toInt();
+      if (newTheme != currentTheme) {
+        currentTheme = newTheme;
+        drawGameLayout(); // Redraws borders in the new color
+        memset(prevGrid, 0, sizeof(prevGrid)); // Forces blocks to redraw with new skin
+      }
     }
     else if (data == "POWERUP:CLEAR") {
       showClearLineMsg();
