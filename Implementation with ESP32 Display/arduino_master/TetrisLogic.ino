@@ -31,6 +31,10 @@ unsigned long doublePointsStart = 0;
 bool slowGravityActive = false;
 unsigned long slowGravityStart = 0;
 
+unsigned long lockDelayStart = 0;
+bool isLocking = false;
+const int LOCK_DELAY = 200; // 500ms to slide the piece before it locks
+
 
 extern const char pieces_S_l[2][2][4];;
 extern const char pieces_S_r[2][2][4];
@@ -77,18 +81,7 @@ void hardDrop() {
     }
     score += 2 * cellsDropped; // 2 points per cell
 
-    // Lock piece into grid
-    for (short i = 0; i < 4; i++) {
-      grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
-    }
-
-    generate();
-
-    if (spawnCollision()) {
-      displayGameOver();
-      return;
-    }
-
+    lockPiece();
     refreshGrid();
     delay(200);  // simple debounce
   }
@@ -108,20 +101,31 @@ void updatePieceGravity() {
     }
   }
 
-  if (millis() - timer > interval) {
-    checkLines();
-
-    refreshGrid();
-    if (nextCollision()) {
-      for (short i = 0; i < 4; i++)
-        grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
-      generate();
-      if (spawnCollision()) {
-        displayGameOver();
-        return;
+  if (isLocking) {
+      if (nextCollision()) {
+        // If 500ms has passed while touching the bottom, lock it!
+        if (millis() - lockDelayStart >= LOCK_DELAY) {
+          lockPiece();
+          refreshGrid();
+          timer = millis(); // Reset gravity timer
+          return;
+        }
+      } else {
+        // The player slid the piece off a ledge! Cancel the lock timer.
+        isLocking = false;
       }
-    } else
+    }
+
+  // --- STANDARD GRAVITY ---
+  if (millis() - timer > interval) {
+    if (!nextCollision()) {
       pieceY++;
+    } else if (!isLocking) {
+      // We just hit the bottom! Start the lock delay timer.
+      isLocking = true;
+      lockDelayStart = millis();
+    }
+    refreshGrid();
     timer = millis();
   }
 }
@@ -324,20 +328,13 @@ void softDrop() {
       if (!nextCollision()) {
         pieceY++;
         score += 1; // 1 point per cell soft drop
-      } else {
-        // lock piece if it hits something
-        for (short i = 0; i < 4; i++) {
-          grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
-        }
-
-        generate();
-
-        if (spawnCollision()) {
-          displayGameOver();
-          return;
-        }
-
+        isLocking = false; // Cancel lock if falling
         refreshGrid();
+
+      } else if (!isLocking) {
+        // Hitting the ground with soft drop starts the slide timer
+        isLocking = true;
+        lockDelayStart = millis();
       }
     }
   }
@@ -478,5 +475,21 @@ void activateSlowGravity() {
 void checkSlowGravity() {
   if (slowGravityActive && millis() - slowGravityStart >= 10000) {
     slowGravityActive = false;
+  }
+}
+
+void lockPiece() {
+  // 1. Lock piece into grid with its specific color
+  for (short i = 0; i < 4; i++) {
+    grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
+  }
+  
+  isLocking = false; // Reset lock state
+  
+  checkLines(); // Check for completed lines immediately
+  generate();   // Spawn the next piece
+
+  if (spawnCollision()) {
+    displayGameOver();
   }
 }

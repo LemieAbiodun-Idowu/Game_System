@@ -199,33 +199,40 @@ void updateTetrisGrid(String newGrid) {
 
   for (int y = 0; y < 25; y++) {
     for (int x = 0; x < 10; x++) {
-
       char currentState = newGrid.charAt(charIndex);
 
       if (currentState != prevGrid[charIndex]) {
-
         int xPos = GRID_X + (x * BLOCK_WIDTH);
         int yPos = GRID_Y + (y * BLOCK_HEIGHT);
 
         uint16_t blockColor;
+        bool isGhost = false;
+
         switch (currentState) {
           case '1': blockColor = TFT_ORANGE;  break; // Type 0: L-Piece
           case '2': blockColor = TFT_GREEN;   break; // Type 1: S-left
           case '3': blockColor = TFT_RED;     break; // Type 2: S-right
           case '4': blockColor = TFT_YELLOW;  break; // Type 3: Square
           case '5': blockColor = TFT_MAGENTA; break; // Type 4: T-piece
-          case '6': blockColor = TFT_CYAN;    break; // Type 5: I-piece (Line)
+          case '6': blockColor = TFT_CYAN;    break; // Type 5: I-piece
+          case '7': isGhost = true;           break; // Type 6: GHOST PIECE
           default:  blockColor = TFT_BLACK;   break; // Empty space
         }
 
-        if (blockColor != TFT_BLACK) {
+        if (isGhost) {
+          // Draw a hollow dark grey box for the ghost
+          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
+          tft.drawRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
+        } else if (blockColor != TFT_BLACK) {
+          // Draw the solid colored block
           tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, blockColor);
         } else {
+          // Draw empty black space
           tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
         }
+        
         prevGrid[charIndex] = currentState;
       }
-
       charIndex++;
     }
   }

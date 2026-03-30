@@ -31,35 +31,44 @@ void refreshGrid() {
     }
   }
 
-  // 2. Add active falling piece
+  // 2. Add the Ghost Piece (Using '7')
+  short ghostY = getGhostY();
+  for (int i = 0; i < 4; i++) {
+    int px = pieceX + piece[0][i];
+    int py = ghostY + piece[1][i];
+    if (px >= 0 && px < 10 && py >= 0 && py < 25) {
+      if (tempBoard[px][py] == 0) { // Only draw ghost on empty space
+        tempBoard[px][py] = 7;      // '7' tells the ESP32 to draw a ghost block
+      }
+    }
+  }
+
+  // 3. Add active falling piece (OVERWRITES GHOST IF OVERLAPPING)
   for (int i = 0; i < 4; i++) {
     int px = pieceX + piece[0][i];
     int py = pieceY + piece[1][i];
     if (px >= 0 && px < 10 && py >= 0 && py < 25) {
-      tempBoard[px][py] = currentType + 1;
+      tempBoard[px][py] = currentType + 1; // Uses colors 1-6
     }
   }
 
-  Serial.print("CT:"); Serial.println(currentType);
-  Serial.print("CR:"); Serial.println(rotation);
-  Serial.print("CX:"); Serial.println(pieceX);
-  Serial.print("GY:"); Serial.println(getGhostY());
-
-  // 3. Send Grid to ESP32
+  // 4. Send Grid to ESP32 with PACING
   Serial.print("G:");
+  int charCount = 0;
   for (int y = 0; y < 25; y++) {
     for (int x = 0; x < 10; x++) {
       Serial.print(tempBoard[x][y]);
+      charCount++;
+      if (charCount % 25 == 0) delay(1); // Crucial for preventing buffer overflow
     }
   }
   Serial.println();
   
-  // 4. Send HUD data to ESP32
+  // 5. Send HUD data
   Serial.print("S:"); Serial.println(score);
   Serial.print("N:"); Serial.println(nextType);
   Serial.print("H:"); Serial.println(holdType);
   Serial.print("LV:"); Serial.println(level);
-
 }
 
 void sendInformation(){

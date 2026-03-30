@@ -47,12 +47,12 @@ void listenToArduino() {
       String cardNum = data.substring(4);
       cardMsgDisplay(1, (char*)cardNum.c_str());
     }
-    else if (data.startsWith("GY:")) {
-      int ghostY = data.substring(3).toInt();
-      int8_t gPiece[2][4];
-      copyEspPiece(gPiece, activeEspType, activeEspRotation);
-      updateGhostPiece(ghostY, activeEspX, gPiece);
-    }
+    // else if (data.startsWith("GY:")) {
+    //   int ghostY = data.substring(3).toInt();
+    //   int8_t gPiece[2][4];
+    //   copyEspPiece(gPiece, activeEspType, activeEspRotation);
+    //   updateGhostPiece(ghostY, activeEspX, gPiece);
+    // }
     else if (data.startsWith("CT:")) {
       activeEspType = data.substring(3).toInt();
     }

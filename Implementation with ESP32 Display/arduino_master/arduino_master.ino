@@ -43,7 +43,7 @@ void loop() {
   checkSlowGravity();
 
   //send tetris piece information
-  sendInformation();
+  // sendInformation();
   //inputs
   handleLeftRight();
   softDrop();
