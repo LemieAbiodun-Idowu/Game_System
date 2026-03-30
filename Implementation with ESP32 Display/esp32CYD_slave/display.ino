@@ -26,8 +26,9 @@ extern HardwareSerial mySerial;
 
 int currentTheme = 0; 
 
-// --- GAME OVER TRACKERS ---
+// --- GAME OVER & PAUSE TRACKERS ---
 bool isGameOverState = false;
+bool isPausedState = false; // NEW SHIELD TRACKER
 String currentScoreStr = "0";
 int currentLevelDisp = 1;
 
@@ -141,7 +142,7 @@ void drawGameLayout() {
 }
 
 void updateTetrisGrid(String newGrid) {
-  if (isGameOverState) return; // SHIELD
+  if (isGameOverState || isPausedState) return; // DOUBLE SHIELD!
   if (newGrid.length() != 250) return;
 
   int charIndex = 0;
@@ -196,7 +197,7 @@ void updateTetrisGrid(String newGrid) {
 }
 
 void updateScore(String scoreTxt) {
-  if (isGameOverState) return; // SHIELD
+  if (isGameOverState || isPausedState) return; // DOUBLE SHIELD!
 
   currentScoreStr = scoreTxt; 
 
@@ -211,7 +212,7 @@ void updateScore(String scoreTxt) {
 }
 
 void updateLevel(int lvl) {
-  if (isGameOverState) return; // SHIELD
+  if (isGameOverState || isPausedState) return; // DOUBLE SHIELD!
 
   currentLevelDisp = lvl; 
 
@@ -226,7 +227,7 @@ void updateLevel(int lvl) {
 }
 
 void drawNextPiece(int nextType) {
-  if (isGameOverState) return; // SHIELD
+  if (isGameOverState || isPausedState) return; // DOUBLE SHIELD!
 
   tft.fillRect(NEXT_X + 2, NEXT_Y + 15, 76, 43, TFT_BLACK);
   int8_t nPiece[2][4];
@@ -249,7 +250,7 @@ void drawNextPiece(int nextType) {
 }
 
 void drawHoldPiece(int holdType) {
-  if (isGameOverState) return; // SHIELD
+  if (isGameOverState || isPausedState) return; // DOUBLE SHIELD!
   
   tft.fillRect(HOLD_X + 2, HOLD_Y + 15, 76, 43, TFT_BLACK);
   if (holdType == -1) return;
@@ -306,12 +307,39 @@ void showGameOver() {
 }
 
 void showPause() {
-  tft.setTextColor(TFT_YELLOW);
-  tft.drawCentreString("PAUSED", centerX, centerY, 4);
+  isPausedState = true; // Raise the Pause shield!
+
+  int boxW = 160;
+  int boxH = 70;
+  int boxX = centerX - (boxW / 2);
+  int boxY = centerY - (boxH / 2);
+
+  // 1. Draw a dark shadow
+  tft.fillRect(boxX + 6, boxY + 6, boxW, boxH, tft.color565(30, 30, 30));
+
+  // 2. Draw the main box with a thick Yellow Border
+  tft.fillRect(boxX, boxY, boxW, boxH, TFT_BLACK);
+  tft.drawRect(boxX, boxY, boxW, boxH, TFT_YELLOW);
+  tft.drawRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2, TFT_YELLOW);
+  tft.drawRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4, TFT_YELLOW);
+
+  // 3. Draw "PAUSED" Drop Shadow (Dark Yellow)
+  tft.setTextColor(tft.color565(100, 100, 0)); 
+  tft.drawCentreString("PAUSED", centerX + 2, boxY + 17, 4);
+  
+  // 4. Draw "PAUSED" Main Text (Bright Yellow)
+  tft.setTextColor(TFT_YELLOW); 
+  tft.drawCentreString("PAUSED", centerX, boxY + 15, 4);
+
+  // 5. Instruction text
+  tft.setTextColor(TFT_WHITE);
+  tft.drawCentreString("- PRESS TO RESUME -", centerX, boxY + 50, 1);
 }
 
 void resumeGame() {
   isGameOverState = false; 
+  isPausedState = false; // Lower ALL shields!
+  
   drawGameLayout();
   memset(prevGrid, 0, sizeof(prevGrid));
 }
