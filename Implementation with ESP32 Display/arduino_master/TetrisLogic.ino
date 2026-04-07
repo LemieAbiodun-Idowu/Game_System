@@ -31,6 +31,8 @@ unsigned long doublePointsStart = 0;
 bool slowGravityActive = false;
 unsigned long slowGravityStart = 0;
 
+int totalLinesCleared = 0;
+
 unsigned long lockDelayStart = 0;
 bool isLocking = false;
 const int LOCK_DELAY = 200; // 500ms to slide the piece before it locks
@@ -164,6 +166,7 @@ void resetGame() {
   canHold = true;
   nextType = random(TYPES);
   level = 1;
+  totalLinesCleared = 0;
   generate();
   isGameOver = false;
 
@@ -216,8 +219,11 @@ void checkLines() {
       score += 50 * comboCount * level * multiplier;
     }
 
+    // Track total lines
+    totalLinesCleared += linesCleared;
+
     // Increase level every 10 lines
-    level = (score / 1000) + 1;
+    level = (totalLinesCleared / 10) + 1;
 
   } else {
     comboCount = -1; // reset combo if no lines cleared
