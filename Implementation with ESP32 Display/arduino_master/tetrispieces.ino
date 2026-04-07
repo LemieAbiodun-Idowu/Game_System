@@ -1,3 +1,6 @@
+
+
+//These names are horrible. need fixing
 const char pieces_S_l[2][2][4] PROGMEM = { { { 0, 0, 1, 1 }, { 0, 1, 1, 2 } }, { { 0, 1, 1, 2 }, { 1, 1, 0, 0 } } };
 const char pieces_S_r[2][2][4] PROGMEM = { { { 1, 1, 0, 0 }, { 0, 1, 1, 2 } },
                                            { { 0, 1, 1, 2 }, { 0, 0, 1, 1 } } };

@@ -1,31 +1,33 @@
-byte grid[10][25];
+uint8_t grid[10][25];
+bool isPaused = false;
+//bool pauseButtonReady = true;
 int interval = 500;
 unsigned long score = 0;
 bool isGameOver = false;
 long timer, delayer;
-const short TYPES = 6;  //type of pieces used
-word currentType, nextType, rotation;
+
+// word currentType, nextType, rotation; Why were these words???
+uint8_t currentType, nextType, rotation;
+#define PIECE_TYPES 6
 short pieceX, pieceY;
 short piece[2][4];
-// extern Adafruit_SSD1306 display;
-//extern int x_point, y_point;
-//extern int deadZone;
 unsigned long lastSoftDropTime = 0;
-const int softDropSpeed = 400; // ms between moves
-short holdType = -1; // minus means hold slot is empty
-bool canHold = true; // Prevents holding more than once per drop
-bool holdButtonReady = true; // track if the button can trigger a hold
+#define softDropSpeed 400     // ms between moves
+short holdType = -1;          // minus means hold slot is empty
+bool canHold = true;          // Prevents holding more than once per drop
+bool holdButtonReady = true;  // track if the button can trigger a hold
+bool rotateButtonReady = true;
 unsigned long lastMoveTime = 0;
-const int moveDelay = 120; // ms between moves
+#define moveDelay 300  // ms between moves
 unsigned long holdStartTime = 0;
 bool isHoldingButton = false;
 int level = 1;
-int comboCount = -1; // -1 means no active combo
+int comboCount = -1;  // -1 means no active combo
 
 // 3 types of powerups - doublePoints, clearLine, slowGravity
-// doublePoints doubles points gathered from breakLine for 10s - card 2
+// doublePoints doubles points gathered from breakLine for 60s - card 2
 // clear line clears bottom three lines - card 3
-// slowGravity slows the gravity for 10s - card 4
+// slowGravity slows the gravity for 30s - card 4
 bool doublePointsActive = false;
 unsigned long doublePointsStart = 0;
 bool slowGravityActive = false;
@@ -33,111 +35,384 @@ unsigned long slowGravityStart = 0;
 
 unsigned long lockDelayStart = 0;
 bool isLocking = false;
-const int LOCK_DELAY = 200; // 500ms to slide the piece before it locks
+#define LOCK_DELAY 200
 
 //tetris skins
-int currentTheme = 0; // NEW: 0 = Default, 1 = Neon, 2 = Gameboy
+int currentTheme = 0;  // NEW: 0 = Default, 1 = Neon, 2 = Gameboy
 
-extern const char pieces_S_l[2][2][4];;
+extern const char pieces_S_l[2][2][4];
+;
 extern const char pieces_S_r[2][2][4];
 extern const char pieces_L_l[4][2][4];
 extern const char pieces_Sq[1][2][4];
 extern const char pieces_T[4][2][4];
 extern const char pieces_l[2][2][4];
 
-// --- SERIAL COMMUNICATION TO ESP32 ---
+uint8_t gameState = 0;  //0 for unintialised, 1 for Play, 2 for Pause
+bool scoreUpdated = false;
+bool nextTypeUpdated = false;
+bool holdTypeUpdated = false;
+bool levelUpdated = false;
+bool currentThemeUpdated = false;
+bool gameInitialised = false;
+bool endTetris = false;
 
-void displayGameOver() {
-  Serial.println("STATE:OVER");
-  isGameOver = true;
+void playTetris() {
+  endTetris = false;
+  if (gameInitialised)
+    resetGame();
+  while (!endTetris) {
+    setVolume();
+    if (!gameInitialised) {
+      initialiseGame();
+    }
+    // else resetGame();
+    if (gameOver()) continue;  // GAMEOVER WILL HAVE THE FUNC THAT COULD CHANGE ENDTETRIS VAL
+    //if(isGameOver) return;
+
+    if (pauseButton()) continue;  //AND SO WILL THIS JUST USE A QUIT SELECTOR
+    //if(isPaused) return;
+
+    //powerups
+    bool cardEffect = checkCardEffect();
+    if (cardEffect) {
+      checkDoublePoints();
+      // checkPowerUpCard(); //Why check for effect after double points?
+      checkSlowGravity();
+    }
+    //send tetris piece information
+    // sendInformation();
+    //inputs
+    handleLeftRight();
+    softDrop();
+    hardDrop();
+    holdBlocks();
+    PieceRotation();
+    //game logic
+    updatePieceGravity();
+    updateMood();
+  }
 }
-
-
+bool seedRandomised = false;
 void initialiseGame() {
-  randomSeed(analogRead(0));  //Need to change this as 1. analogRead(0) can return 0 1/1024 which causes a failure and 2. We will be using pin 0 in future
-                              //I might recommend using micros() with some logic i'll add into the display later.
-  nextType = random(TYPES);
+  if (!seedRandomised) {
+    randomSeed(analogRead(A5) + analogRead(A4));
+    seedRandomised = true;
+  }
+  isPaused = false;
+  isLocking = false;
+  comboCount = -1;
+  doublePointsActive = false;
+  slowGravityActive = false;
+
+
+  lastMoodUpdate = millis();
+  lastMoodScore = 0;
+  lastMoodScoreTime = millis();
+  currentMood = 50;
+  delayer = millis();
+  gameState = 1;
+  updateState(gameState);
+  nextType = random(PIECE_TYPES);
+  nextTypeUpdated = true;
   generate();
   timer = millis();
-
-  Serial.println("STATE:PLAY");
   refreshGrid();
+  nextTypeUpdated = false;
+  gameInitialised = true;
 }
 
-void checkGameOver() {
-  if (isGameOver) {
-    if (!digitalRead(B_2) || !digitalRead(B_1)) {  
-      delay(250);             // simple debounce
-      resetGame();
-    }
+
+void generate() {
+  currentType = nextType;
+  nextType = random(PIECE_TYPES);
+
+  pieceX = 3;
+  pieceY = 0;
+  rotation = 0;
+  copyPiece(piece, currentType, rotation);
+  canHold = true;  // ADDED: Player can use hold again for this new piece  //bro what in the chatgpt is this statement
+  // pieceDataMsg(currentType, rotation, pieceX);
+  //   Serial.print("CurType:"); Serial.println(currentType); //only UART comms should have message handling
+  //   Serial.print("Rot:"); Serial.println(rotation);
+  //   Serial.print("X_pos:"); Serial.println(pieceX);
+}
+
+// Puts the correct piece type in based on the rotation value
+void copyPiece(short piece[2][4], short type, short rotation) {
+  switch (type) {
+    case 0:
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_L_l[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_L_l[rotation][1][i]));
+      }
+      break;
+    case 1:
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_S_l[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_S_l[rotation][1][i]));
+      }
+      break;
+    case 2:
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_S_r[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_S_r[rotation][1][i]));
+      }
+      break;
+    case 3:
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_Sq[0][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_Sq[0][1][i]));
+      }
+      break;
+    case 4:
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_T[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_T[rotation][1][i]));
+      }
+      break;
+    case 5:
+      for (short i = 0; i < 4; i++) {
+        piece[0][i] = pgm_read_byte(&(pieces_l[rotation][0][i]));
+        piece[1][i] = pgm_read_byte(&(pieces_l[rotation][1][i]));
+      }
+      break;
   }
 }
 
-void hardDrop() {
-  if (!digitalRead(UP)) {  // button pressed (INPUT_PULLUP)
-    int cellsDropped = 0;
-    // Move piece down until collision
-    while (!nextCollision()) {
-      pieceY++;
-      cellsDropped++;
-    }
-    score += 2 * cellsDropped; // 2 points per cell
+// Finds the lowest valid Y coordinate for the current piece
+short getGhostY() {
+  short ghostY = pieceY;
+  // Keep pushing the ghost piece down until it hits something
+  while (!checkCollisionAt(ghostY)) {
+    ghostY++;
+  }
+  return ghostY;
+}
 
-    lockPiece();
-    refreshGrid();
-    delay(200);  // simple debounce
+bool gameOver() {
+  if (isGameOver) {
+    gameState = 3;
+    updateState(gameState);
+    if (!digitalRead(A_btn)) {
+      timer = millis();
+      while ((millis() - timer) <= 250)
+        ;
+      resetGame();
+    } else if (!digitalRead(B_btn)) {
+      timer = millis();
+      while ((millis() - timer) <= 250)
+        ;
+      endTetris = true;
+      // gameInitialised = false;  // force reinit next time
+      isGameOver = false;
+      currentScreen = MAIN_MENU;
+    }
+    return true;
+  } else return false;
+}
+
+// Simulates a collision check at a specific simulated Y coordinate
+bool checkCollisionAt(short simY) {
+  for (short i = 0; i < 4; i++) {
+    short y = simY + piece[1][i] + 1;  // Check the next step down
+    short x = pieceX + piece[0][i];
+
+    if (y > 24 || grid[x][y]) {
+      return true;  // Collision detected
+    }
+  }
+  return false;
+}
+
+void refreshGrid() {
+  char tempBoard[10][25];
+
+  // Copy grid state
+  for (uint8_t x = 0; x < 10; x++) {
+    for (uint8_t y = 0; y < 25; y++) {
+      tempBoard[x][y] = grid[x][y] + '0';
+    }
+  }
+
+  // Add Ghost Piece
+  short ghostY = getGhostY();
+  for (int i = 0; i < 4; i++) {
+    uint8_t px = pieceX + piece[0][i];
+    uint8_t py = ghostY + piece[1][i];
+    if (px >= 0 && px < 10 && py >= 0 && py < 25) {
+      if (tempBoard[px][py] == '0') {  // Only draw ghost on empty space
+        tempBoard[px][py] = '7';       // '7' tells the ESP32 to draw a ghost block
+      }
+    }
+  }
+
+  // Add active falling piece (OVERWRITES GHOST IF OVERLAPPING)
+  for (int i = 0; i < 4; i++) {
+    int px = pieceX + piece[0][i];
+    int py = pieceY + piece[1][i];
+    if (px >= 0 && px < 10 && py >= 0 && py < 25) {
+      tempBoard[px][py] = currentType + 1 + '0';  // Uses colors 1-6
+    }
+  }
+  //Should only really send things when theyre updated
+  nextTypeUpdated = true;
+  gridData(score, nextType, holdType, level, currentTheme, scoreUpdated,
+           nextTypeUpdated, holdTypeUpdated, levelUpdated, currentThemeUpdated, tempBoard);
+  //Send Grid to ESP32
+  // Serial.print("Grid:");
+  //int charCount = 0;
+  // for (int y = 0; y < 25; y++) {
+  //   for (int x = 0; x < 10; x++) {
+  //     // Serial.print(tempBoard[x][y]);
+
+  //     //charCount++;
+  //     //if (charCount % 25 == 0) delay(1); // Crucial for preventing buffer overflow  //Never use delay just use a millis() timer
+  //   }
+  // }
+}
+
+
+
+
+void resetGame() {
+  for (short x = 0; x < 10; x++)
+    for (short y = 0; y < 25; y++)
+      grid[x][y] = 0;
+
+  isPaused = false;
+  isLocking = false;
+  comboCount = -1;
+  doublePointsActive = false;
+  slowGravityActive = false;
+
+
+  score = 0;
+  scoreUpdated = true;
+  interval = 750;
+  holdType = -1;
+  holdTypeUpdated = true;
+  canHold = true;
+  nextType = random(PIECE_TYPES);
+  nextTypeUpdated = true;
+  level = 1;
+  levelUpdated = true;
+  generate();
+  isGameOver = false;
+  gameState = 1;
+  updateState(gameState);
+  refreshGrid();
+  scoreUpdated = false;
+  holdTypeUpdated = false;
+  nextTypeUpdated = false;
+  levelUpdated = false;
+}
+
+bool pauseButton() {
+  if (!digitalRead(B_btn)) {
+    //if (pauseButtonReady) {
+    //pauseButtonReady = false;
+    unsigned long pressStart = millis();
+
+    // Wait to see how long the button is held
+    while (!digitalRead(B_btn)) {
+      if (millis() - pressStart > 750) return false;  // held too long, ignore
+    }
+
+    // Only toggle if released before 1.5 seconds
+    isPaused = !isPaused;
+    if (isPaused) {
+      //Serial.println("STATE:PAUSE");
+      gameState = 2;
+      updateState(gameState);
+    } else {
+      //Serial.println("STATE:PLAY");
+      gameState = 1;
+      updateState(gameState);
+      scoreUpdated = true;
+      nextTypeUpdated = true;
+      holdTypeUpdated = true;
+      levelUpdated = true;
+      refreshGrid();
+      scoreUpdated = false;
+      nextTypeUpdated = false;
+      holdTypeUpdated = false;
+      levelUpdated = false;
+    }
+    return true;
+    //}
+  } else return false;
+  // else {
+  //   pauseButtonReady = true;
+  // }
+}
+
+unsigned long lastHarddrop = 0;
+void hardDrop() {
+  if (!digitalRead(UP_btn)) {
+    if (millis() - lastHarddrop >= 250) {
+      int cellsDropped = 0;
+      while (!nextCollision()) {
+        pieceY++;
+        cellsDropped++;
+      }
+      score += 2 * cellsDropped;
+      scoreUpdated = true;
+      lockPiece();
+      refreshGrid();
+      scoreUpdated = false;
+      lastHarddrop = millis();
+    }
   }
 }
 
 void updatePieceGravity() {
-  if(isPaused || isGameOver) return;
+  if (isPaused || isGameOver) return;
 
   if (slowGravityActive) {
-    interval = 1500; // slow
-  }else {
-    if(interval > 100){
-      interval = max(100, 500 - ((level - 1) * 50)); // gets faster each level, minimum 100ms
-    }
-    else{
-      interval = interval = max(50, 100 - ((level - 1) * 2)); //gets faster more slowly after level 10
+    interval = 1500;  // slow
+  } else {
+    if (interval > 100) {
+      interval = 500 - (level - 1) * 25;
+    } else {
+      interval = interval = max(125, 250 - ((level - 1) * 2));  //gets faster more slowly
     }
   }
 
   if (isLocking) {
-      if (nextCollision()) {
-        // If 500ms has passed while touching the bottom, lock it!
-        if (millis() - lockDelayStart >= LOCK_DELAY) {
-          lockPiece();
-          refreshGrid();
-          timer = millis(); // Reset gravity timer
-          return;
-        }
-      } else {
-        // The player slid the piece off a ledge! Cancel the lock timer.
-        isLocking = false;
+    if (nextCollision()) {
+      // If 500ms has passed while touching the bottom, lock it!
+      if (millis() - lockDelayStart >= LOCK_DELAY) {
+        lockPiece();
+        refreshGrid();
+        timer = millis();  // Reset gravity timer
+        return;
       }
+    } else {
+      // The player slid the piece off a ledge! Cancel the lock timer.
+      isLocking = false;
     }
+  }
 
   // --- STANDARD GRAVITY ---
   if (millis() - timer > interval) {
+    bool gridChanged = false;
     if (!nextCollision()) {
       pieceY++;
+      gridChanged = true;
     } else if (!isLocking) {
       // We just hit the bottom! Start the lock delay timer.
       isLocking = true;
       lockDelayStart = millis();
     }
-    refreshGrid();
+    if (gridChanged) refreshGrid();
     timer = millis();
   }
 }
 
 void PieceRotation() {
-  if (!digitalRead(B_1)) {  //assign to change
-    // tone(BUZZER, click[0], 1000 / click_duration[0]);
-    // delay(100);
-    // noTone(BUZZER);
-    if (b3) {
+  if (!digitalRead(A_btn)) {
+    if (rotateButtonReady) {
       if (rotation == getMaxRotation(currentType) - 1 && canRotate(0)) {
         rotation = 0;
       } else if (canRotate(rotation + 1)) {
@@ -145,44 +420,17 @@ void PieceRotation() {
       }
       copyPiece(piece, currentType, rotation);
       refreshGrid();
-      b3 = false;
+      rotateButtonReady = false;
       delayer = millis();
     }
-  } else if (millis() - delayer > 50) {
-    b3 = true;
+  } else if (millis() - delayer > 250) {
+    rotateButtonReady = true;
   }
 }
 
-void resetGame() {
-  for (short x = 0; x < 10; x++)
-    for (short y = 0; y < 25; y++)
-      grid[x][y] = 0;
-  
-  score = 0;
-  interval = 500;
-  holdType = -1;    
-  canHold = true;
-  nextType = random(TYPES);
-  level = 1;
-  generate();
-  isGameOver = false;
 
-  Serial.println("STATE:PLAY");
-  refreshGrid();
-}
 
-void generate() {
-  currentType = nextType;
-  nextType = random(TYPES);
-  pieceX = 3;
-  pieceY = 0;
-  rotation = 0;
-  copyPiece(piece, currentType, rotation);
-  canHold = true; // ADDED: Player can use hold again for this new piece
-  Serial.print("CT:"); Serial.println(currentType);
-  Serial.print("CR:"); Serial.println(rotation);
-  Serial.print("CX:"); Serial.println(pieceX);
-}
+
 
 void checkLines() {
   int linesCleared = 0;
@@ -202,7 +450,7 @@ void checkLines() {
   if (linesCleared > 0) {
     comboCount++;
 
-  	int multiplier = doublePointsActive ? 2 : 1;
+    int multiplier = doublePointsActive ? 2 : 1;
     // Base score by lines cleared
     switch (linesCleared) {
       case 1: score += 100 * level * multiplier; break;  // Single
@@ -210,7 +458,6 @@ void checkLines() {
       case 3: score += 500 * level * multiplier; break;  // Triple
       case 4: score += 800 * level * multiplier; break;  // Tetris
     }
-
     // Combo bonus
     if (comboCount > 0) {
       score += 50 * comboCount * level * multiplier;
@@ -218,9 +465,13 @@ void checkLines() {
 
     // Increase level every 10 lines
     level = (score / 1000) + 1;
-
+    scoreUpdated = true;
+    levelUpdated = true;
+    refreshGrid();
+    scoreUpdated = false;
+    levelUpdated = false;
   } else {
-    comboCount = -1; // reset combo if no lines cleared
+    comboCount = -1;  // reset combo if no lines cleared
   }
 }
 void breakLine(short line) {
@@ -263,46 +514,8 @@ bool spawnCollision() {
   }
   return false;
 }
-void copyPiece(short piece[2][4], short type, short rotation) {
-  switch (type) {
-    case 0:  //L_l
-      for (short i = 0; i < 4; i++) {
-        piece[0][i] = pgm_read_byte(&(pieces_L_l[rotation][0][i]));
-        piece[1][i] = pgm_read_byte(&(pieces_L_l[rotation][1][i]));
-      }
-      break;
-    case 1:  //S_l
-      for (short i = 0; i < 4; i++) {
-        piece[0][i] = pgm_read_byte(&(pieces_S_l[rotation][0][i]));
-        piece[1][i] = pgm_read_byte(&(pieces_S_l[rotation][1][i]));
-      }
-      break;
-    case 2:  //S_r
-      for (short i = 0; i < 4; i++) {
-        piece[0][i] = pgm_read_byte(&(pieces_S_r[rotation][0][i]));
-        piece[1][i] = pgm_read_byte(&(pieces_S_r[rotation][1][i]));
-      }
-      break;
-    case 3:  //Sq
-      for (short i = 0; i < 4; i++) {
-        piece[0][i] = pgm_read_byte(&(pieces_Sq[0][0][i]));
-        piece[1][i] = pgm_read_byte(&(pieces_Sq[0][1][i]));
-      }
-      break;
-    case 4:  //T
-      for (short i = 0; i < 4; i++) {
-        piece[0][i] = pgm_read_byte(&(pieces_T[rotation][0][i]));
-        piece[1][i] = pgm_read_byte(&(pieces_T[rotation][1][i]));
-      }
-      break;
-    case 5:  //l
-      for (short i = 0; i < 4; i++) {
-        piece[0][i] = pgm_read_byte(&(pieces_l[rotation][0][i]));
-        piece[1][i] = pgm_read_byte(&(pieces_l[rotation][1][i]));
-      }
-      break;
-  }
-}
+
+
 
 short getMaxRotation(short type) {
   if (type == 1 || type == 2 || type == 5)
@@ -322,16 +535,18 @@ bool canRotate(short rotation) {
 }
 
 void softDrop() {
-  if (!digitalRead(DOWN)) { 
+  if (!digitalRead(DOWN_btn)) {
 
     if (millis() - lastSoftDropTime >= softDropSpeed) {
       lastSoftDropTime = millis();
 
       if (!nextCollision()) {
         pieceY++;
-        score += 1; // 1 point per cell soft drop
-        isLocking = false; // Cancel lock if falling
+        score += 1;  // 1 point per cell soft drop
+        scoreUpdated = true;
+        isLocking = false;  // Cancel lock if falling
         refreshGrid();
+        scoreUpdated = false;
 
       } else if (!isLocking) {
         // Hitting the ground with soft drop starts the slide timer
@@ -343,16 +558,14 @@ void softDrop() {
 }
 
 void holdBlocks() {
-  if (!digitalRead(B_2)) {  // Button pressed (LOW)
-    
+  if (!digitalRead(B_btn)) {  // Button pressed (LOW)
+
     if (!isHoldingButton) {
       // First moment button is pressed
       holdStartTime = millis();
       isHoldingButton = true;
     }
-
-    // Check if held for 2 seconds
-    if (isHoldingButton && (millis() - holdStartTime >= 1000)) {
+    if (isHoldingButton && (millis() - holdStartTime >= 750)) {
 
       if (holdButtonReady) {
         // Prevent invalid states
@@ -364,7 +577,7 @@ void holdBlocks() {
           generate();
         } else {
           // Swap pieces
-          short temp = currentType;
+          uint8_t temp = currentType;
           currentType = holdType;
           holdType = temp;
 
@@ -373,9 +586,10 @@ void holdBlocks() {
           rotation = 0;
           copyPiece(piece, currentType, rotation);
         }
-
+        holdTypeUpdated = true;
         canHold = false;
         refreshGrid();
+        holdTypeUpdated = false;
 
         holdButtonReady = false;  // prevent repeat trigger
       }
@@ -388,28 +602,9 @@ void holdBlocks() {
   }
 }
 
-// Simulates a collision check at a specific simulated Y coordinate
-bool checkCollisionAt(short simY) {
-  for (short i = 0; i < 4; i++) {
-    short y = simY + piece[1][i] + 1; // Check the next step down
-    short x = pieceX + piece[0][i];
-    
-    if (y > 24 || grid[x][y]) {
-      return true; // Collision detected
-    }
-  }
-  return false;
-}
 
-// Finds the lowest valid Y coordinate for the current piece
-short getGhostY() {
-  short ghostY = pieceY;
-  // Keep pushing the ghost piece down until it hits something
-  while (!checkCollisionAt(ghostY)) {
-    ghostY++;
-  }
-  return ghostY;
-}
+
+
 
 void handleLeftRight() {
   //if (isPaused || isGameOver) return;  irrelevant
@@ -417,16 +612,15 @@ void handleLeftRight() {
   // Only allow movement every "moveDelay" milliseconds
   if (millis() - lastMoveTime < moveDelay) return;
 
-  // LEFT button (INPUT_PULLUP → LOW when pressed)
-  if (!digitalRead(LEFT)) {
+  if (!digitalRead(LEFT_btn)) {
     if (!nextHorizontalCollision(piece, -1)) {
       pieceX--;
       refreshGrid();
       lastMoveTime = millis();
     }
   }
-  // RIGHT button
-  if (!digitalRead(RIGHT)) {
+
+  if (!digitalRead(RIGHT_btn)) {
     if (!nextHorizontalCollision(piece, 1)) {
       pieceX++;
       refreshGrid();
@@ -437,6 +631,20 @@ void handleLeftRight() {
 //========================================
 // POWERUPS
 //=========================================
+
+void activateDoublePoints() {
+  //No timer pause implemented when paused
+  doublePointsActive = true;
+  doublePointsStart = millis();
+  // cardEffectMsg(cardNum);
+  //Serial.println("POWERUP:DOUBLE");
+}
+
+void checkDoublePoints() {
+  if (doublePointsActive && (millis() - doublePointsStart) >= 60000) {
+    doublePointsActive = false;
+  }
+}
 
 void clearBottomThreeLines() {
   for (short y = 22; y <= 24; y++) {
@@ -456,26 +664,15 @@ void clearBottomThreeLines() {
   refreshGrid();
 }
 
-void activateDoublePoints() {
-  doublePointsActive = true;
-  doublePointsStart = millis();
-  Serial.println("POWERUP:DOUBLE");
-}
-
-void checkDoublePoints() {
-  if (doublePointsActive && millis() - doublePointsStart >= 10000) {
-    doublePointsActive = false;
-  }
-}
 
 void activateSlowGravity() {
   slowGravityActive = true;
   slowGravityStart = millis();
-  Serial.println("POWERUP:SLOW");
+  // Serial.println("POWERUP:SLOW");
 }
 
 void checkSlowGravity() {
-  if (slowGravityActive && millis() - slowGravityStart >= 10000) {
+  if (slowGravityActive && millis() - slowGravityStart >= 30000) {
     slowGravityActive = false;
   }
 }
@@ -485,14 +682,13 @@ void lockPiece() {
   for (short i = 0; i < 4; i++) {
     grid[pieceX + piece[0][i]][pieceY + piece[1][i]] = currentType + 1;
   }
-  
-  isLocking = false; // Reset lock state
-  
-  checkLines(); // Check for completed lines immediately
-  generate();   // Spawn the next piece
+
+  isLocking = false;  // Reset lock state
+
+  checkLines();  // Check for completed lines immediately
+  generate();    // Spawn the next piece
 
   if (spawnCollision()) {
-    displayGameOver();
+    isGameOver = true;
   }
 }
-
