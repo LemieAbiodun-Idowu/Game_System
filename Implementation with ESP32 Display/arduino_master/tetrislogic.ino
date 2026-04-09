@@ -373,15 +373,15 @@ void updatePieceGravity() {
   if (isPaused || isGameOver) return;
 
   if (slowGravityActive) {
-    interval = 1500;  // slow
+      interval = 1500;
   } else {
-    if (interval > 100) {
-      interval = 500 - (level - 1) * 25;
-    } else {
-      interval = interval = max(125, 250 - ((level - 1) * 2));  //gets faster more slowly
-    }
+      if (level < 16) {
+          interval = 500 - (level - 1) * 25;
+      } else {
+          interval = max(80, 125 - ((level - 16) * 2));
+      }
   }
-
+  
   if (isLocking) {
     if (nextCollision()) {
       // If 500ms has passed while touching the bottom, lock it!
