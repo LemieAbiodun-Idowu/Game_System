@@ -12,7 +12,8 @@ uint8_t currentType, nextType, rotation;
 short pieceX, pieceY;
 short piece[2][4];
 unsigned long lastSoftDropTime = 0;
-#define softDropSpeed 400     // ms between moves
+//#define softDropSpeed 400     // ms between moves
+int softDropSpeed;
 short holdType = -1;          // minus means hold slot is empty
 bool canHold = true;          // Prevents holding more than once per drop
 bool holdButtonReady = true;  // track if the button can trigger a hold
@@ -381,7 +382,7 @@ void updatePieceGravity() {
           interval = max(80, 125 - ((level - 16) * 2));
       }
   }
-  
+
   if (isLocking) {
     if (nextCollision()) {
       // If 500ms has passed while touching the bottom, lock it!
@@ -543,7 +544,7 @@ void PieceRotation() {
 
   void softDrop() {
     if (!digitalRead(DOWN_btn)) {
-
+    softDropSpeed = interval * 0.8;
       if (millis() - lastSoftDropTime >= softDropSpeed) {
         lastSoftDropTime = millis();
 
