@@ -4,6 +4,7 @@ unsigned long clearLineFlashTimer = 0;
 bool showingClearLineMsg = false;
 bool clearLineMsgVisible = false;
 
+
 unsigned long doublePointsMsgStart = 0;
 unsigned long doublePointsFlashTimer = 0;
 bool showingDoublePointsMsg = false;
@@ -106,8 +107,36 @@ void clearSlowGravityMsg() {
   }
 }
 
-void clearPowerUpMsg(){
+void clearPowerUpMsg() {
   clearDoublePointsMsg();
   clearClearLineMsg();
   clearSlowGravityMsg();
+}
+bool rotated = false;
+bool rotationPending = false;
+unsigned long rotationStart = 0;
+
+void triggerRotationEffect() {
+  rotationPending = true;  // don't rotate yet, wait for unpause
+}
+
+void applyRotationIfPending() {
+  if (!rotationPending) return;
+  rotationPending = false;
+  rotated = !rotated;
+  tft.setRotation(rotated ? 0 : 2);
+  rotationStart = millis();
+  drawGameLayout();
+  memset(prevGrid, 0, sizeof(prevGrid));
+}
+extern uint8_t mood;
+void checkRotationExpiry() {
+  if (!rotated) return;
+  if (millis() - rotationStart >= ROTATION_DURATION) {
+    rotated = false;
+    tft.setRotation(2);
+    drawGameLayout();
+    drawPortrait(mood);
+    memset(prevGrid, 0, sizeof(prevGrid));
+  }
 }

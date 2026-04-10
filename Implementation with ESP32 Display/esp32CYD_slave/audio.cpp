@@ -1,7 +1,6 @@
 #include "audio.h"
-#include "songs/notemap.h"
+#include "notemap.h"
 #include "songs/songs.h"
-#include <Arduino.h>
 #define CH1 1
 #define CH2 4
 #define CH3 7
@@ -34,13 +33,13 @@ void updateTrack(Buzzer& buzzer, const uint16_t track[][3], const size_t trackLe
 
       ledcWriteTone(buzzer.channel, note);
       ledcWrite(buzzer.channel, volume);
-      buzzer.nextEvent = currentTime + duration;
+      buzzer.nextEvent = buzzer.nextEvent + duration;
       buzzer.isPlaying = true;
     }
 
   } else if (currentTime >= buzzer.nextEvent) {
     ledcWriteTone(buzzer.channel, 0);
-    buzzer.nextEvent = currentTime + pause;
+    buzzer.nextEvent = buzzer.nextEvent + pause;
     buzzer.isPlaying = false;
     buzzer.index++;
   }
@@ -66,21 +65,22 @@ void buzzerSetup(Buzzer& buzzer) {
 // }
 uint8_t currentSongIndex = 0;
 bool songPlaying = false;
+unsigned long stopTime = 0;
 
 void startSong(uint8_t index) {
   currentSongIndex = index;
   songPlaying = true;
-
+  unsigned long present = millis();
   // Reset all buzzers
   buzzer1.index = 0;
   buzzer1.isPlaying = false;
-  buzzer1.nextEvent = 0;
+  buzzer1.nextEvent = present;
   buzzer2.index = 0;
   buzzer2.isPlaying = false;
-  buzzer2.nextEvent = 0;
+  buzzer2.nextEvent = present;
   buzzer3.index = 0;
   buzzer3.isPlaying = false;
-  buzzer3.nextEvent = 0;
+  buzzer3.nextEvent = present;
 
   ledcWriteTone(buzzer1.channel, 0);
   ledcWriteTone(buzzer2.channel, 0);
@@ -92,6 +92,7 @@ void stopSong() {
   ledcWriteTone(buzzer1.channel, 0);
   ledcWriteTone(buzzer2.channel, 0);
   ledcWriteTone(buzzer3.channel, 0);
+  stopTime = millis();
 }
 
 void playNextSong() {
@@ -112,9 +113,16 @@ void updateSong() {
     startSong(currentSongIndex);
     return;
   }
-
-  const Song& s = songList[currentSongIndex];
   unsigned long now = millis();
+  if (stopTime != 0) {
+    unsigned long pauseDur = now - stopTime;
+    buzzer1.nextEvent += pauseDur;
+    buzzer2.nextEvent += pauseDur;
+    buzzer3.nextEvent += pauseDur;
+    stopTime = 0;
+  }
+  const Song& s = songList[currentSongIndex];
+
 
   if (s.ch1_len > 0) updateTrack(buzzer1, s.ch1, s.ch1_len, now);
   if (s.ch2_len > 0) updateTrack(buzzer2, s.ch2, s.ch2_len, now);
@@ -129,4 +137,12 @@ void buzzersSetup() {
   buzzerSetup(buzzer1);
   buzzerSetup(buzzer2);
   buzzerSetup(buzzer3);
+}
+
+void resyncSong() {
+  if (!songPlaying) return;
+  unsigned long resetTime = millis();
+  buzzer1.nextEvent = resetTime;
+  buzzer2.nextEvent = resetTime;
+  buzzer3.nextEvent = resetTime;
 }

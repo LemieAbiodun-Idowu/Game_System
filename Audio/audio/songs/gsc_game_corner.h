@@ -1,6 +1,7 @@
 #pragma once
 
 const uint16_t gsc_game_corner_ch1[][3] = {
+    {0, 0, 231},
  {NOTE_G4, 230, 116},
  {NOTE_G4, 230, 116},
  {NOTE_G4, 230, 116},

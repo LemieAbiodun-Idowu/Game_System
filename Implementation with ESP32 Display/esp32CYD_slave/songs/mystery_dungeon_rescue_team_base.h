@@ -1,4 +1,5 @@
 #pragma once
+
 const uint16_t mystery_dungeon_rescue_team_base_ch1[][3] = {
  {NOTE_B4, 922, 1},
  {NOTE_D4, 276, 1},
@@ -330,6 +331,7 @@ const uint16_t mystery_dungeon_rescue_team_base_ch2[][3] = {
  {NOTE_D3, 461, 1},
  {NOTE_G3, 1845, 0},
 };
+
 const char mystery_dungeon_rescue_team_baseName[] = "Mystery Dungeon Rescue Team ~ Team Base";
 const uint16_t mystery_dungeon_rescue_team_base_ch1_len = ARRAY_LEN(mystery_dungeon_rescue_team_base_ch1);
 const uint16_t mystery_dungeon_rescue_team_base_ch2_len = ARRAY_LEN(mystery_dungeon_rescue_team_base_ch2);

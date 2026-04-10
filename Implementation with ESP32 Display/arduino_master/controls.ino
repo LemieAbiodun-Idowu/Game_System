@@ -4,8 +4,9 @@
 #define DOWN_btn 5
 #define LEFT_btn 2
 #define RIGHT_btn 4
-#define BTN_DEBOUNCE 250
+#define BTN_DEBOUNCE 50
 #define VOLUME_CTRL 14
+#define PAUSE_btn 6
 // bool UPbuttonReady = true;
 // bool DOWNbuttonReady = true;
 // bool LEFTbuttonReady = true;
@@ -28,6 +29,7 @@ void controlsSetup() {
   pinMode(A_btn, INPUT_PULLUP);
   pinMode(B_btn, INPUT_PULLUP);
   pinMode(VOLUME_CTRL, INPUT);
+  pinMode(PAUSE_btn, INPUT_PULLUP);
 }
 
 void setVolume() {

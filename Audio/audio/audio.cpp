@@ -1,5 +1,5 @@
 #include "audio.h"
-#include "songs/notemap.h"
+#include "notemap.h"
 #include "songs/songs.h"
 #include <Arduino.h>
 #define CH1 1
@@ -33,14 +33,14 @@ void updateTrack(Buzzer& buzzer, const uint16_t track[][3], const size_t trackLe
     if (currentTime >= buzzer.nextEvent) {
 
       ledcWriteTone(buzzer.channel, note);
-      ledcWrite(buzzer.channel, volume);
-      buzzer.nextEvent = currentTime + duration;
+      // ledcWrite(buzzer.channel, volume);
+      buzzer.nextEvent = buzzer.nextEvent + duration;
       buzzer.isPlaying = true;
     }
 
   } else if (currentTime >= buzzer.nextEvent) {
     ledcWriteTone(buzzer.channel, 0);
-    buzzer.nextEvent = currentTime + pause;
+    buzzer.nextEvent = buzzer.nextEvent + pause;
     buzzer.isPlaying = false;
     buzzer.index++;
   }
@@ -70,17 +70,17 @@ bool songPlaying = false;
 void startSong(uint8_t index) {
   currentSongIndex = index;
   songPlaying = true;
-
+  unsigned long present = millis();
   // Reset all buzzers
   buzzer1.index = 0;
   buzzer1.isPlaying = false;
-  buzzer1.nextEvent = 0;
+  buzzer1.nextEvent = present;
   buzzer2.index = 0;
   buzzer2.isPlaying = false;
-  buzzer2.nextEvent = 0;
+  buzzer2.nextEvent = present;
   buzzer3.index = 0;
   buzzer3.isPlaying = false;
-  buzzer3.nextEvent = 0;
+  buzzer3.nextEvent = present;
 
   ledcWriteTone(buzzer1.channel, 0);
   ledcWriteTone(buzzer2.channel, 0);

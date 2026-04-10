@@ -78,8 +78,7 @@ bool checkCardEffect() {
   if (invalidCardSerial || noCardPresent) return false;
   mfrc522.PICC_HaltA();
   switch (matchingCard) {
-    case 1:  //monochrome
-      break;
+    case 1:  
     case 2:
       activateDoublePoints();
       cardEffectMsg(matchingCard);
@@ -120,7 +119,10 @@ bool checkCardEffect() {
     //   currentTheme = 0;
     //   refreshGrid();
     // }
+    case 7:
     case 8:  //Rotate
+    cardEffectMsg(matchingCard);
+    refreshGrid();
       break;
     default:
       failedCardMsg(1);

@@ -22,6 +22,7 @@ void stopSong();
 void playNextSong();
 bool isSongFinished();
 void updateSong();
+void resyncSong();
 
 const char *getCurrentSongName();
 void buzzersSetup();

@@ -18,6 +18,8 @@ bool menuPointerChanged = false;
 
 void displayCurrentScreen() {
   updateSong();
+  clearPowerUpMsg();  // must always run, move to top
+  checkRotationExpiry();
   if (prevScreen != currentScreen) {
     tft.fillScreen(backgroundClr);
     // Serial.println("Filling Screen");
@@ -33,7 +35,7 @@ void displayCurrentScreen() {
     prevScreen = currentScreen;
     if (songDisplayUpdate || menuPointerChanged) {
       displaySong();
-      Serial.println(volume);
+      // Serial.println(volume);
       songDisplayUpdate = true;
       // Serial.println("updated songs");
     }
@@ -59,7 +61,18 @@ void displayCurrentScreen() {
   }
   //remove check here for advancements
   else {
-    // updatePartnerPortrait();
+    // handle card effects being shown during pause
+    if (isPausedState && !pauseCardScanHandled) {
+      uint8_t cardmsg = handleMessage();
+      if (cardmsg == CARD_EFFECT_MSG_HANDLED) {
+        pauseCardScanHandled = true;
+        // show confirmation
+        tft.fillRect(centerX - 80, centerY + 20, 160, 20, TFT_BLACK);
+        tft.setTextColor(TFT_GREEN);
+        tft.drawCentreString("EFFECT APPLIED!", centerX, centerY + 22, 1);
+      }
+      return;  // don't process other screen logic while paused
+    }
   }
   handleMessage();
 }

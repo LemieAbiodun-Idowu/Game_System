@@ -19,6 +19,7 @@ const char CARD_EFFECT_THEME_NEON[] PROGMEM = "CRDEFF:NEON";
 const char CARD_EFFECT_DOUBLEPOINTS[] PROGMEM = "CRDEFF:DOUBLE";
 const char CARD_EFFECT_LINECLEAR[] PROGMEM = "CRDEFF:CLEAR";
 const char CARD_EFFECT_SLOWGAME[] PROGMEM = "CRDEFF:SLOW";
+const char CARD_EFFECT_ROTATE[] PROGMEM = "CRDEFF:ROT";
 const char CARD_EFFECT_THEME_GAMEBOY[] PROGMEM = "CRDEFF:GMEBOY";
 const char MENU_ENTERED[] PROGMEM = "MENU:ENTR";
 const char MENU_UP[] PROGMEM = "MENU:UP";
@@ -151,7 +152,6 @@ void gridData(unsigned long score, uint8_t nextPiece, int holdPiece, int level, 
 void cardEffectMsg(int cardNum) {
   switch (cardNum) {
     case 1:
-      break;
     case 2:
       Serial.println(FPSTR(CARD_EFFECT_DOUBLEPOINTS));
       break;
@@ -166,6 +166,10 @@ void cardEffectMsg(int cardNum) {
       break;
     case 6:
       Serial.println(FPSTR(CARD_EFFECT_THEME_GAMEBOY));
+      break;
+    case 7:
+    case 8:
+      Serial.println(FPSTR(CARD_EFFECT_ROTATE));
       break;
   }
 }
@@ -193,7 +197,7 @@ void sendMoodMsg(uint8_t moodVal) {
   prevMoodVal = moodVal;
 }
 
-void sendVolume(uint16_t volume){
+void sendVolume(uint16_t volume) {
   snprintf(msg, sizeof(msg), "VOLUME:%d", volume);
   Serial.println(msg);
 }

@@ -1,10 +1,5 @@
-
-
-
-
-
-
 #pragma once
+
 const uint16_t pearl_fey_with_pearly_ch1[][3] = {
   { NOTE_A5, 135, 8 },
   { NOTE_A_Sh_5, 135, 8 },

@@ -155,27 +155,29 @@ void preloadFrame1() {
 
 void drawPortrait(uint8_t mood) {  //mood can be 1-5
   uint8_t portraitInd;
-  switch (mood) {
-    case 1:  //very angry
-      portraitInd = 5;
-      break;
-    case 2:  //slightly less angry
-      portraitInd = 4;
-      break;
-    case 3:  //sad neutral
-      portraitInd = 3;
-      break;
-    case 4:  //neutral
-      portraitInd = 1;
-      break;
-    case 5:  //happy
-      portraitInd = 2;
-      break;
-    default:
-      Serial.println("drawPortrait: invalid mood value");
-      return;
+  if (rotated) portraitInd = 6;
+  else {
+    switch (mood) {
+      case 1:  //very angry
+        portraitInd = 5;
+        break;
+      case 2:  //slightly less angry
+        portraitInd = 4;
+        break;
+      case 3:  //sad neutral
+        portraitInd = 3;
+        break;
+      case 4:  //neutral
+        portraitInd = 1;
+        break;
+      case 5:  //happy
+        portraitInd = 2;
+        break;
+      default:
+        Serial.println("drawPortrait: invalid mood value");
+        return;
+    }
   }
-
 
 
   snprintf(filename, sizeof(filename), "%s/%s_data/Sprites_CLR/%s_clr_portraits/%s_clr_portraits%d_%s.bin", DEF_DIRECTORY,

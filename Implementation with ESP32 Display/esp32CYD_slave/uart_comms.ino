@@ -1,16 +1,7 @@
 #include "songs/songs.h"
 #include "audio.h"
 HardwareSerial ArduinoSerial(2);
-#define MAX_MSG_SIZE 350
-#define TETRIS_DATA_MSG_HANDLED 1
-#define GAMESTATE_MSG_HANDLED 2
 
-#define CARD_EFFECT_MSG_HANDLED 4
-
-#define GAME1_ENTERED 8
-#define MOOD_MSG_HANDLED 9
-#define VOLUME_MSG_HANDLED 10
-#define INVALID_MSG 0
 char msg[MAX_MSG_SIZE];
 int msglen;
 
@@ -36,6 +27,7 @@ const char ARD_CARD_EFFECT_DOUBLEPOINTS[] = "CRDEFF:DOUBLE";
 const char ARD_CARD_EFFECT_LINECLEAR[] = "CRDEFF:CLEAR";
 const char ARD_CARD_EFFECT_SLOWGAME[] = "CRDEFF:SLOW";
 const char ARD_CARD_EFFECT_THEME_GAMEBOY[] = "CRDEFF:GMEBOY";
+const char ARD_CARD_EFFECT_ROTATE[] PROGMEM = "CRDEFF:ROT";
 const char ARD_GRID_MSG_PREF[] = "GRID:";
 const char ARD_MENU_MSG_PREF[] = "MENU:";
 const char ARD_MENU_MSG_ENTER[] = "MENU:ENTR";
@@ -48,6 +40,8 @@ const char ARD_MENU_MSG_B[] = "MENU:B";
 const char ARD_VOLUME_MSG_PREF[] = "VOLUME:";
 extern uint16_t volume;
 extern bool songPlaying;
+extern Buzzer buzzer1, buzzer2, buzzer3;
+
 void UARTsetup() {
   ArduinoSerial.begin(115200, SERIAL_8N1, 35, 22);
 }
@@ -65,7 +59,7 @@ uint8_t handleMessage() {
     if (msglen > 0 && msg[msglen - 1] == '\r') {
       msg[msglen - 1] = '\0';
     }
-    Serial.println(msg);
+    // Serial.println(msg);
     return processMsgFromArduino(msg);
   } else {
     // Serial.println("nothing seen");
@@ -100,10 +94,10 @@ uint8_t processMsgFromArduino(const char* message) {
     } else if (cardEffectsMsg(message)) {
       handleCardEffectMsg(message);
       return CARD_EFFECT_MSG_HANDLED;
-    } else if (volumeMsg(message)){
+    } else if (volumeMsg(message)) {
       handleVolumeMessage(message);
       return VOLUME_MSG_HANDLED;
-    }else return INVALID_MSG;
+    } else return INVALID_MSG;
 
   } else return INVALID_MSG;
 }
@@ -245,10 +239,11 @@ void handleMenuMsg(const char* message) {
 
 void handleGameStateMsg(const char* message) {
   if (strcmp(message, ARD_GAMESTATE_PLAY) == 0) {
+    songPlaying = true;
+    applyRotationIfPending();  
     resumeGame();
     prevScreen = currentScreen;
-    Serial.println("Playing Tetris");
-    songPlaying = true;
+    // Serial.println("Playing Tetris");
     return;
   } else if (strcmp(message, ARD_GAMESTATE_PAUSE) == 0) {
     showPause();
@@ -308,12 +303,13 @@ void handleTetrisDataMsg(const char* message) {
   } else if (startsWith(message, ARD_LVL_MSG_PREF)) {
     ptr = strstr(message, ARD_LVL_MSG_PREF);
     ptr += strlen(ARD_LVL_MSG_PREF);
-    int8_t pos = -1;
-    uint16_t templvl = 0;
-    while (ptr[++pos] != '\0') {
-      templvl = templvl * 10 + (ptr[pos] - '0');
-    }
-    updateLevel(templvl);
+    // int8_t pos = -1;
+    // uint16_t templvl = 0;
+    // while (ptr[++pos] != '\0') {
+    //   templvl = templvl * 10 + (ptr[pos] - '0');
+    // }
+
+    updateLevel(ptr);
   } else if (startsWith(message, ARD_THEME_MSG_PREF)) {
     ptr = strstr(message, ARD_THEME_MSG_PREF);
     ptr += strlen(ARD_THEME_MSG_PREF);
@@ -324,17 +320,24 @@ void handleTetrisDataMsg(const char* message) {
     }
     if (newTheme != currentTheme) {
       currentTheme = newTheme;
-      drawGameLayout();                       // Redraws borders in the new color
-      memset(prevGrid, 0, sizeof(prevGrid));  // Forces blocks to redraw with new skin
     }
   } else return;
 }
+
+
 
 
 void handleCardEffectMsg(const char* message) {
   if (strcmp(message, ARD_CARD_EFFECT_DOUBLEPOINTS) == 0) showDoublePointsMsg();
   else if (strcmp(message, ARD_CARD_EFFECT_LINECLEAR) == 0) showClearLineMsg();
   else if (strcmp(message, ARD_CARD_EFFECT_SLOWGAME) == 0) showSlowGravityMsg();
+  else if (strcmp(message, ARD_CARD_EFFECT_THEME_NEON) == 0 || strcmp(message, ARD_CARD_EFFECT_THEME_GAMEBOY) == 0) {
+
+    // drawGameLayout();                       // Redraws borders in the new color
+    memset(prevGrid, 0, sizeof(prevGrid));  // Forces blocks to redraw with new skin
+  } else if (strcmp(message, ARD_CARD_EFFECT_ROTATE) == 0) {
+    triggerRotationEffect();
+  }
 }
 
 extern uint8_t mood;
@@ -368,8 +371,8 @@ void handleVolumeMessage(const char* message) {
   ptr += strlen(ARD_VOLUME_MSG_PREF);
   int8_t pos = -1;
   uint16_t newVolume = 0;
-  while(ptr[++pos] != '\0'){
-    newVolume = newVolume*10 + (ptr[pos] - '0');
+  while (ptr[++pos] != '\0') {
+    newVolume = newVolume * 10 + (ptr[pos] - '0');
     // Serial.println(ptr[pos]);
   }
   volume = newVolume;

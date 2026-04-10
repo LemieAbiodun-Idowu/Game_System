@@ -3,11 +3,12 @@
 #include <FS.h>
 #include <TFT_eSPI.h>
 #include "SD.h"  //Using SD cards
+#include "audio.h"
 #define BOOTUP_CARD_SCAN_MSG_HANDLED 3
 #define MENU_ENTERED_ESP 7
 
 using fs::File;
-#include "audio.h"
+
 
 
 //move to spriteHandling later
@@ -19,9 +20,12 @@ using fs::File;
 #define SLEEP_SPRITE_NUM 2
 #define PARTNER_POPUP_DONE 5
 #define FILENAME_MAX_LENGTH 200
-#define IDLE_DELAY 750   //not good for sylv, glac, leaf, umbr, esp, flare, jolt
-#define WALK_DELAY 220   //good for all
-#define SLEEP_DELAY 650  //good for all
+#define IDLE_DELAY_A 750  //not good for sylv, glac, leaf, umbr, esp, flare, jolt
+#define IDLE_DELAY_B 375  //jolt, leaf, glace
+#define IDLE_DELAY_C 312  //flare
+#define IDLE_DELAY_D 200  //esp, umbr, sylv
+#define WALK_DELAY 220    //good for all
+#define SLEEP_DELAY 650   //good for all
 // Size for the largest sprites (Largest Size is actually 32x64 but made slightly bigger just in case)
 #define SPRITE_MAX_W 64
 #define SPRITE_MAX_H 64
@@ -45,9 +49,20 @@ using fs::File;
 #define HOLD_Y 250
 
 
-
+//cardeffs
+#define ROTATION_DURATION 10000
 //move to uart comms
 #define MENU_MSG_HANDLED 6
+#define MAX_MSG_SIZE 350
+#define TETRIS_DATA_MSG_HANDLED 1
+#define GAMESTATE_MSG_HANDLED 2
+
+#define CARD_EFFECT_MSG_HANDLED 4
+
+#define GAME1_ENTERED 8
+#define MOOD_MSG_HANDLED 9
+#define VOLUME_MSG_HANDLED 10
+#define INVALID_MSG 0
 
 
 //Will be removed once header files are put in

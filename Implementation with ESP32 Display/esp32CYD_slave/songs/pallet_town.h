@@ -1,4 +1,5 @@
 #pragma once
+
 const uint16_t pallet_town_ch1[][3]= {
  {NOTE_D5, 247, 1},
  {NOTE_C5, 247, 1},

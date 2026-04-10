@@ -56,8 +56,9 @@ int displtimer;
 uint8_t currentTheme;
 bool isGameOverState = false;
 bool isPausedState = false;  // NEW SHIELD TRACKER
-String currentScoreStr = "0";
-int currentLevelDisp = 1;
+#define SCORE_LVL_LENGTH 5
+uint16_t currentScore = 0;
+uint16_t currentLevel = 1;
 unsigned long timer;
 const char SD_MOUNT_FAIL[] = "CARD MOUNT FAILED";
 const char NO_SD_ATTCHD[] = "NO SD CARD ATTACHED";
@@ -341,14 +342,55 @@ void displayStartupPartnerSprite(const char* partner, const char* Animation, con
     uint16_t y_displ = (SCREEN_WIDTH - sprHeight) * 0.75;
     tft.pushImage(x_displ, y_displ, sprWidth, sprHeight, spriteBuffer);
     timer = millis();
-    if (strcmp(Animation, "idle") == 0 || strcmp(Animation, "nod") == 0) {
-      while (millis() - timer <= IDLE_DELAY)
-        ;
-    } else if (strcmp(Animation, "sleep") == 0) {
-      while (millis() - timer <= SLEEP_DELAY)
+    // if (strcmp(Animation, "idle") == 0 || strcmp(Animation, "nod") == 0) {
+    //   while (millis() - timer <= IDLE_DELAY)
+    //     ;
+    // } else if (strcmp(Animation, "sleep") == 0) {
+    //   while (millis() - timer <= SLEEP_DELAY)
+    //     ;
+    // } else if (strcmp(Animation, "walk") == 0) {
+    //   while (millis() - timer <= WALK_DELAY)
+    //     ;
+    // }
+    if (strcmp(Animation, "idle") == 0) {
+      switch (partnerIndex) {
+        case 0:  //Vaporeon
+          while (millis() - timer <= IDLE_DELAY_A)
+            ;
+          break;
+        case 1:  //Jolteon
+          while (millis() - timer <= IDLE_DELAY_B)
+            ;
+          break;
+        case 2:  //Flareon
+          while (millis() - timer <= IDLE_DELAY_C)
+            ;
+          break;
+        case 3:  //Espeon, Umbreon not possible
+          while (millis() - timer <= IDLE_DELAY_D)
+            ;
+          break;
+        case 5:  //Leafeon
+          while (millis() - timer <= IDLE_DELAY_B)
+            ;
+          break;
+        case 6:  //gGlaceon
+          while (millis() - timer <= IDLE_DELAY_B)
+            ;
+          break;
+        case 7:  //Sylveon
+          while (millis() - timer <= IDLE_DELAY_D)
+            ;
+          break;
+      }
+    } else if (strcmp(Animation, "nod") == 0 && partnerIndex == 4) {
+      while (millis() - timer <= IDLE_DELAY_B)
         ;
     } else if (strcmp(Animation, "walk") == 0) {
       while (millis() - timer <= WALK_DELAY)
+        ;
+    } else if (strcmp(Animation, "sleep") == 0) {
+      while (millis() - timer <= SLEEP_DELAY)
         ;
     }
     // }
@@ -497,32 +539,38 @@ void updateMenuPartnerSprite(const char* partner, const char* Animation, const u
   }
 
   if (strcmp(Animation, "idle") == 0) {
-    frameDelay = IDLE_DELAY;
     switch (partnerIndex) {
       case 0:  //Vaporeon
         spriteNums = IDLE_SPRITE_NUM_A;
+        frameDelay = IDLE_DELAY_A;
         break;
       case 1:  //Jolteon
         spriteNums = IDLE_SPRITE_NUM_A;
+        frameDelay = IDLE_DELAY_B;
         break;
       case 2:  //Flareon
         spriteNums = IDLE_SPRITE_NUM_B;
+        frameDelay = IDLE_DELAY_C;
         break;
       case 3:  //Espeon, Umbreon not possible
         spriteNums = IDLE_SPRITE_NUM_B;
+        frameDelay = IDLE_DELAY_D;
         break;
       case 5:  //Leafeon
         spriteNums = IDLE_SPRITE_NUM_B;
+        frameDelay = IDLE_DELAY_B;
         break;
       case 6:  //gGlaceon
         spriteNums = IDLE_SPRITE_NUM_B;
+        frameDelay = IDLE_DELAY_B;
         break;
       case 7:  //Sylveon
         spriteNums = IDLE_SPRITE_NUM_C;
+        frameDelay = IDLE_DELAY_D;
         break;
     }
   } else if (strcmp(Animation, "nod") == 0 && partnerIndex == 4) {
-    frameDelay = IDLE_DELAY;
+    frameDelay = IDLE_DELAY_D;
     spriteNums = NOD_SPRITE_NUM;
   } else if (strcmp(Animation, "walk") == 0) {
     frameDelay = WALK_DELAY;
@@ -637,6 +685,7 @@ void resumeGame() {
   // Serial.println("Drawed Layout");
   memset(prevGrid, 0, sizeof(prevGrid));  //clear the previous grid
   drawPortrait(mood);
+  // resyncSong();
 }
 
 void drawGameLayout() {
@@ -691,16 +740,21 @@ void showGameOver() {
   tft.setTextColor(TFT_WHITE);
   tft.drawCentreString("FINAL SCORE", centerX, boxY + 50, 1);
   tft.setTextColor(TFT_YELLOW);
-  tft.drawCentreString(currentScoreStr, centerX, boxY + 65, 2);
-
+  char scoreDisp[SCORE_LVL_LENGTH];
+  snprintf(scoreDisp, SCORE_LVL_LENGTH, "%d", currentScore);
+  tft.drawCentreString(scoreDisp, centerX, boxY + 65, 2);
   tft.setTextColor(TFT_WHITE);
-  tft.drawCentreString("LEVEL " + String(currentLevelDisp), centerX, boxY + 85, 1);
+  char levelDisp[SCORE_LVL_LENGTH + strlen("LEVEL ")];
+  snprintf(levelDisp, SCORE_LVL_LENGTH + strlen("LEVEL "), "LEVEL %d", currentLevel);
+  tft.drawCentreString(levelDisp, centerX, boxY + 85, 1);
   memset(prevGrid, 0, sizeof(prevGrid));
 }
 
-void showPause() {
-  isPausedState = true;  // Raise the Pause shield!
 
+bool pauseCardScanHandled = false;
+void showPause() {
+  isPausedState = true;          // Raise the Pause shield!
+  pauseCardScanHandled = false;  // reset on each new pause
   int boxW = 160;
   int boxH = 70;
   int boxX = centerX - (boxW / 2);
@@ -726,6 +780,8 @@ void showPause() {
   // 5. Instruction text
   tft.setTextColor(TFT_WHITE);
   tft.drawCentreString("- PRESS TO RESUME -", centerX, boxY + 50, 1);
+  tft.setTextColor(TFT_CYAN);
+  tft.drawCentreString("SCAN CARD FOR EFFECT", centerX, boxY + 58, 1);
 }
 
 
@@ -753,16 +809,18 @@ void updateTetrisGrid(char* newGrid) {
           case '5': blockColor = TFT_MAGENTA; break;
           case '6': blockColor = TFT_CYAN; break;
           case '7': isGhost = true; break;
-          default: blockColor = TFT_BLACK; break;
+          default: blockColor = backgroundClr; break;
         }
 
-        if (currentTheme == 2 && blockColor != TFT_BLACK && !isGhost) {
+        if (currentTheme == 2 && blockColor != backgroundClr && !isGhost) {
           blockColor = TFT_GREEN;
         }
 
         if (isGhost) {
-          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_BLACK);
-          tft.drawRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);
+          tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, backgroundClr);
+          if (backgroundClr == TFT_BLACK) {
+            tft.drawRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_DARKGREY);  //opposite end on colour wheel at least on the espi library i found
+          } else tft.drawRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, TFT_LIGHTGREY);
         } else if (blockColor != TFT_BLACK) {
           tft.fillRect(xPos, yPos, BLOCK_WIDTH - 1, BLOCK_HEIGHT - 1, blockColor);
 
@@ -783,34 +841,45 @@ void updateTetrisGrid(char* newGrid) {
   }
 }
 
-void updateScore(char* scoreTxt) {
+void updateScore(const char* scoreTxt) {
   if (isGameOverState || isPausedState) return;  // DOUBLE SHIELD!
-
-  currentScoreStr = scoreTxt;
+  int8_t pos = -1;
+  // uint16_t templvl = 0;
+  currentScore = 0;
+  while (scoreTxt[++pos] != '\0') {
+    currentScore = currentScore * 10 + (scoreTxt[pos] - '0');
+  }
 
   uint16_t borderColor = TFT_WHITE;
   if (currentTheme == 1) borderColor = TFT_MAGENTA;
   if (currentTheme == 2) borderColor = TFT_GREEN;
 
-  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, borderColor);
-  tft.drawRect(SCORE_X, SCORE_Y, 58, 38, borderColor);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, updateTextClr());
+  tft.drawRect(SCORE_X, SCORE_Y, 58, 38, updateTextClr());
+  tft.setTextColor(updateTextClr(), backgroundClr);
   tft.drawString(scoreTxt, SCORE_X + 5, SCORE_Y + 18, 1);
 }
 
-void updateLevel(int lvl) {
+void updateLevel(const char* lvl) {
   if (isGameOverState || isPausedState) return;  // DOUBLE SHIELD!
 
-  currentLevelDisp = lvl;
+
+  int8_t pos = -1;
+  // uint16_t templvl = 0;
+  currentLevel = 0;
+  while (lvl[++pos] != '\0') {
+    currentLevel = currentLevel * 10 + (lvl[pos] - '0');
+  }
+
 
   uint16_t borderColor = TFT_WHITE;
   if (currentTheme == 1) borderColor = TFT_MAGENTA;
   if (currentTheme == 2) borderColor = TFT_GREEN;
 
-  tft.fillRect(SCORE_X + 64, SCORE_Y + 15, 50, 15, TFT_BLACK);
-  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, borderColor);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(String(lvl), SCORE_X + 64, SCORE_Y + 18, 1);
+  tft.fillRect(SCORE_X + 64, SCORE_Y + 15, 50, 15, backgroundClr);
+  tft.drawRect(SCORE_X, SCORE_Y, 80, 38, updateTextClr());
+  tft.setTextColor(updateTextClr(), backgroundClr);
+  tft.drawString(lvl, SCORE_X + 64, SCORE_Y + 18, 1);  //dont like strings sorry bro
 }
 
 void drawNextPiece(int nextType) {
@@ -858,4 +927,17 @@ void drawHoldPiece(int holdType) {
       tft.fillRect(px + 3, py + 3, 3, 3, TFT_GREEN);
     }
   }
+}
+
+
+// void triggerRotationEffect() {
+//   tft.setRotation(0);
+//   // drawGameLayout();                       // redraw everything for new orientation
+//   // memset(prevGrid, 0, sizeof(prevGrid));  // force full grid redraw
+// }
+
+void untriggerRotationEffect() {
+  tft.setRotation(2);
+  // drawGameLayout();
+  // memset(prevGrid, 0, sizeof(prevGrid));
 }

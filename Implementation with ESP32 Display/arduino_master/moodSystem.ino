@@ -1,4 +1,4 @@
-#define MOOD_UPDATE_INTERVAL 3000
+#define MOOD_UPDATE_INTERVAL 250
 #define MOOD_HISTORY_WINDOW 10000
 
 unsigned long lastMoodUpdate = 0;

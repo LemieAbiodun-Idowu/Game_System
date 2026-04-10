@@ -1,4 +1,4 @@
-#include "songs/notemap.h"
+#include "notemap.h"
 const uint16_t frequencies[] = {
   31,
   33,
